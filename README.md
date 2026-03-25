@@ -30,6 +30,39 @@ pip install -r requirements.txt
 python train.py
 ```
 
+## Project Assistant
+
+An interactive bash assistant (`assist.sh`) wraps every common task into a single command so you can do minimal work:
+
+```bash
+./assist.sh help      # show all commands
+./assist.sh setup     # install dependencies
+./assist.sh train     # train the network
+./assist.sh test      # run tests
+./assist.sh lint      # lint with ruff
+./assist.sh format    # auto-format code
+./assist.sh check     # lint + tests
+./assist.sh clean     # remove caches
+./assist.sh all       # full pipeline: setup → lint → test → train
+```
+
+All the same targets are also available via `make`:
+
+```bash
+make help    # list targets
+make all     # full pipeline
+make check   # lint + tests
+```
+
+### CI / Automation
+
+A GitHub Actions workflow (`.github/workflows/ci.yml`) runs automatically on every push and PR to `main`:
+
+- Lints with **ruff**
+- Runs the **pytest** suite
+- Smoke-tests training (`python train.py`)
+- Tests across Python 3.10, 3.11, and 3.12
+
 ## Expected Output
 
 ```
@@ -64,12 +97,14 @@ python -m pytest tests/ -v
 
 ```
 libaix/
-├── neural_network.py   # NeuralNetwork class (forward, backward, train, predict)
-├── train.py            # Training script — run this!
+├── assist.sh                   # Project assistant (bash)
+├── neural_network.py           # NeuralNetwork class (forward, backward, train, predict)
+├── train.py                    # Training script — run this!
 ├── tests/
 │   └── test_neural_network.py
-├── requirements.txt    # numpy, pytest
-├── Makefile            # make run / make test
+├── requirements.txt            # numpy, pytest, ruff
+├── Makefile                    # make run / make test / make lint / …
+├── .github/workflows/ci.yml   # GitHub Actions CI
 └── README.md
 ```
 
