@@ -40,7 +40,24 @@ from crawler import (
     save_config,
 )
 from file_processor import classify_domain, process_file, process_pasted_text
+from forum_crawler import (
+    crawl_single_forum_topic,
+    load_forum_config,
+    run_all_forum_crawlers,
+    save_forum_config,
+)
 from knowledge_base import KNOWLEDGE, get_domains
+from ml_engine import (
+    assess_growth,
+    assess_model,
+    get_engine_stats,
+    load_engine_config,
+    optimize_model,
+    run_growth_cycle,
+    save_engine_config,
+    stabilize_model,
+)
+from site_crawler import add_site_job, clear_site_jobs, get_site_crawl_stats
 
 # ── Config ────────────────────────────────────────────────────────────
 UPLOAD_DIR = Path("data/uploads")
@@ -119,6 +136,9 @@ def dashboard():
 def api_stats():
     extra_count = _count_extra_knowledge()
     config = load_config()
+    forum_config = load_forum_config()
+    site_stats = get_site_crawl_stats()
+    engine_stats = get_engine_stats()
     return jsonify({
         "builtin_entries": len(KNOWLEDGE),
         "extra_entries": extra_count,
@@ -129,6 +149,13 @@ def api_stats():
             "topics": config.get("topics", []),
             "last_crawl": config.get("last_crawl"),
         },
+        "forum_crawler": {
+            "topics": forum_config.get("topics", []),
+            "last_crawl": forum_config.get("last_crawl"),
+            "stats": forum_config.get("stats", {}),
+        },
+        "site_crawler": site_stats,
+        "ml_engine": engine_stats,
     })
 
 
@@ -395,6 +422,194 @@ def browse_knowledge():
             continue
 
     return jsonify({"entries": entries, "total": len(entries)})
+
+
+# ── Helpers ───────────────────────────────────────────────────────────
+
+# ── Forum Crawler management ─────────────────────────────────────────
+
+@admin_bp.route("/forum/topics")
+@login_required
+def get_forum_topics():
+    config = load_forum_config()
+    return jsonify({
+        "topics": config.get("topics", []),
+        "stats": config.get("stats", {}),
+    })
+
+
+@admin_bp.route("/forum/add-topic", methods=["POST"])
+@login_required
+def add_forum_topic():
+    data = request.get_json()
+    if not data or not data.get("name"):
+        return jsonify({"error": "Topic name required"}), 400
+    config = load_forum_config()
+    topics = config.get("topics", [])
+    if any(t["name"].lower() == data["name"].lower() for t in topics):
+        return jsonify({"error": "Topic already exists"}), 400
+    topics.append({
+        "name": data["name"],
+        "keywords": [k.strip() for k in data.get("keywords", []) if k.strip()],
+        "enabled": True,
+        "max_per_source": int(data.get("max_per_source", 10)),
+        "sources": data.get("sources", ["stackexchange", "reddit"]),
+    })
+    config["topics"] = topics
+    save_forum_config(config)
+    return jsonify({"status": "success", "topics": topics})
+
+
+@admin_bp.route("/forum/remove-topic", methods=["POST"])
+@login_required
+def remove_forum_topic():
+    data = request.get_json()
+    if not data or not data.get("name"):
+        return jsonify({"error": "Topic name required"}), 400
+    config = load_forum_config()
+    config["topics"] = [t for t in config.get("topics", []) if t["name"] != data["name"]]
+    save_forum_config(config)
+    return jsonify({"status": "success", "topics": config["topics"]})
+
+
+@admin_bp.route("/forum/toggle-topic", methods=["POST"])
+@login_required
+def toggle_forum_topic():
+    data = request.get_json()
+    if not data or not data.get("name"):
+        return jsonify({"error": "Topic name required"}), 400
+    config = load_forum_config()
+    for t in config.get("topics", []):
+        if t["name"] == data["name"]:
+            t["enabled"] = not t.get("enabled", True)
+            break
+    save_forum_config(config)
+    return jsonify({"status": "success", "topics": config["topics"]})
+
+
+@admin_bp.route("/forum/run", methods=["POST"])
+@login_required
+def run_forum_crawlers():
+    results = run_all_forum_crawlers()
+    return jsonify(results)
+
+
+@admin_bp.route("/forum/run-topic", methods=["POST"])
+@login_required
+def run_single_forum():
+    data = request.get_json()
+    if not data or not data.get("topic"):
+        return jsonify({"error": "Topic required"}), 400
+    return jsonify(crawl_single_forum_topic(
+        data["topic"],
+        data.get("keywords", []),
+        int(data.get("max_per_source", 10)),
+        data.get("sources"),
+    ))
+
+
+# ── Site Crawler (URL crawler) ───────────────────────────────────────
+
+@admin_bp.route("/site-crawl", methods=["POST"])
+@login_required
+def site_crawl():
+    data = request.get_json()
+    if not data or not data.get("url") or not data.get("topic"):
+        return jsonify({"error": "URL and topic are required"}), 400
+    url = data["url"].strip()
+    # Basic URL validation
+    if not url.startswith(("http://", "https://")):
+        return jsonify({"error": "URL must start with http:// or https://"}), 400
+    result = add_site_job(
+        url=url,
+        topic=data["topic"],
+        keywords=[k.strip() for k in data.get("keywords", []) if k.strip()],
+        max_pages=min(int(data.get("max_pages", 20)), 50),
+        max_depth=min(int(data.get("max_depth", 2)), 3),
+    )
+    return jsonify(result)
+
+
+@admin_bp.route("/site-crawl/stats")
+@login_required
+def site_crawl_stats():
+    return jsonify(get_site_crawl_stats())
+
+
+@admin_bp.route("/site-crawl/clear", methods=["POST"])
+@login_required
+def site_crawl_clear():
+    clear_site_jobs()
+    return jsonify({"status": "success", "message": "Job history cleared"})
+
+
+# ── ML Engine controls ───────────────────────────────────────────────
+
+@admin_bp.route("/ml/stats")
+@login_required
+def ml_stats():
+    return jsonify(get_engine_stats())
+
+
+@admin_bp.route("/ml/assess", methods=["POST"])
+@login_required
+def ml_assess():
+    return jsonify(assess_model())
+
+
+@admin_bp.route("/ml/optimize", methods=["POST"])
+@login_required
+def ml_optimize():
+    result = optimize_model()
+    return jsonify(result)
+
+
+@admin_bp.route("/ml/stabilize", methods=["POST"])
+@login_required
+def ml_stabilize():
+    return jsonify(stabilize_model())
+
+
+@admin_bp.route("/ml/growth-check", methods=["POST"])
+@login_required
+def ml_growth_check():
+    return jsonify(assess_growth())
+
+
+@admin_bp.route("/ml/growth-cycle", methods=["POST"])
+@login_required
+def ml_growth_cycle():
+    return jsonify(run_growth_cycle())
+
+
+@admin_bp.route("/ml/config", methods=["GET", "POST"])
+@login_required
+def ml_config():
+    if request.method == "POST":
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+        config = load_engine_config()
+        for key in ["auto_optimize", "auto_stabilize", "auto_grow"]:
+            if key in data:
+                config[key] = bool(data[key])
+        if "min_accuracy_threshold" in data:
+            config["min_accuracy_threshold"] = max(0.5, min(1.0, float(data["min_accuracy_threshold"])))
+        if "confidence_threshold" in data:
+            config["confidence_threshold"] = max(0.1, min(1.0, float(data["confidence_threshold"])))
+        if "growth_targets" in data:
+            targets = config.get("growth_targets", {})
+            gt = data["growth_targets"]
+            if "min_entries" in gt:
+                targets["min_entries"] = int(gt["min_entries"])
+            if "min_domains" in gt:
+                targets["min_domains"] = int(gt["min_domains"])
+            if "target_accuracy" in gt:
+                targets["target_accuracy"] = max(0.5, min(1.0, float(gt["target_accuracy"])))
+            config["growth_targets"] = targets
+        save_engine_config(config)
+        return jsonify({"status": "success", "config": config})
+    return jsonify(load_engine_config())
 
 
 # ── Helpers ───────────────────────────────────────────────────────────

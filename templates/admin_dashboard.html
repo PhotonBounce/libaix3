@@ -102,8 +102,11 @@ textarea{min-height:120px;resize:vertical}
   <p class="sub">Admin Dashboard</p>
   <a href="#" onclick="showSection('dashboard')" class="active" id="nav-dashboard">📊 Dashboard</a>
   <a href="#" onclick="showSection('upload')" id="nav-upload">📁 Upload &amp; Extract</a>
-  <a href="#" onclick="showSection('crawler')" id="nav-crawler">🕷️ Crawler</a>
+  <a href="#" onclick="showSection('crawler')" id="nav-crawler">🕷️ Wiki Crawler</a>
+  <a href="#" onclick="showSection('forum')" id="nav-forum">💬 Forum Crawler</a>
+  <a href="#" onclick="showSection('sitecrawl')" id="nav-sitecrawl">🌐 URL Crawler</a>
   <a href="#" onclick="showSection('learn')" id="nav-learn">🎓 AI Learning</a>
+  <a href="#" onclick="showSection('mlengine')" id="nav-mlengine">⚙️ ML Engine</a>
   <a href="#" onclick="showSection('knowledge')" id="nav-knowledge">📚 Knowledge Browser</a>
   <div class="logout"><a href="/admin/logout">🚪 Sign Out</a></div>
 </nav>
@@ -120,6 +123,8 @@ textarea{min-height:120px;resize:vertical}
   <div class="card"><div class="label">Crawled / Uploaded</div><div class="value green" id="stat-extra">{{ extra_count }}</div></div>
   <div class="card"><div class="label">Total Knowledge</div><div class="value purple" id="stat-total">{{ total_count }}</div></div>
   <div class="card"><div class="label">Domains</div><div class="value orange" id="stat-domains">{{ domains|length }}</div></div>
+  <div class="card"><div class="label">ML Cycles</div><div class="value" id="stat-cycles" style="color:#58a6ff">0</div></div>
+  <div class="card"><div class="label">Model Accuracy</div><div class="value green" id="stat-accuracy">—</div></div>
 </div>
 
 <!-- ══════════════ DASHBOARD ══════════════ -->
@@ -172,10 +177,10 @@ textarea{min-height:120px;resize:vertical}
   <div id="manual-status"></div>
 </div>
 
-<!-- ══════════════ CRAWLER ══════════════ -->
+<!-- ══════════════ CRAWLER (Wikipedia) ══════════════ -->
 <div class="section" id="sec-crawler">
-  <h2>Crawler Management</h2>
-  <p style="margin-bottom:16px;color:#8b949e">Configure topics for the Wikipedia knowledge crawler. Runs every 2 hours via GitHub Actions or manually from here.</p>
+  <h2>Wikipedia Crawler Management</h2>
+  <p style="margin-bottom:16px;color:#8b949e">Configure topics for the Wikipedia knowledge crawler. Runs every 15 min via GitHub Actions or manually from here.</p>
 
   <div id="topic-list"></div>
 
@@ -191,6 +196,63 @@ textarea{min-height:120px;resize:vertical}
   <hr style="border-color:#30363d;margin:24px 0">
   <button class="btn btn-orange" onclick="runAllCrawlers()">🕷️ Run All Crawlers Now</button>
   <div id="crawler-status"></div>
+</div>
+
+<!-- ══════════════ FORUM CRAWLER ══════════════ -->
+<div class="section" id="sec-forum">
+  <h2>Forum Crawler — StackExchange &amp; Reddit</h2>
+  <p style="margin-bottom:16px;color:#8b949e">
+    Crawl free public forums (ServerFault, NetworkEngineering, Security StackExchange, Reddit r/networking, r/netsec, r/sysadmin) for real-world Q&amp;A knowledge.
+  </p>
+
+  <div id="forum-topic-list"></div>
+
+  <h3 style="margin:20px 0 12px;font-size:1rem">Forum Crawl Stats</h3>
+  <div id="forum-stats" style="margin-bottom:16px"></div>
+
+  <h3 style="margin:20px 0 12px;font-size:1rem">Add Forum Topic</h3>
+  <label for="forumTopicName">Topic Name</label>
+  <input type="text" id="forumTopicName" placeholder="e.g. Firewall Configuration">
+  <label for="forumTopicKeywords">Keywords (comma-separated)</label>
+  <input type="text" id="forumTopicKeywords" placeholder="e.g. iptables, firewalld, pfSense">
+  <label for="forumTopicMax">Max Results per Source</label>
+  <input type="text" id="forumTopicMax" value="10" style="width:80px">
+  <div style="margin-bottom:12px">
+    <label><input type="checkbox" id="srcSE" checked> StackExchange</label>
+    <label style="margin-left:12px"><input type="checkbox" id="srcReddit" checked> Reddit</label>
+  </div>
+  <button class="btn btn-primary" onclick="addForumTopic()">➕ Add Forum Topic</button>
+
+  <hr style="border-color:#30363d;margin:24px 0">
+  <button class="btn btn-orange" onclick="runAllForums()">💬 Run All Forum Crawlers</button>
+  <div id="forum-status"></div>
+</div>
+
+<!-- ══════════════ SITE/URL CRAWLER ══════════════ -->
+<div class="section" id="sec-sitecrawl">
+  <h2>URL Crawler — Crawl Any Website</h2>
+  <p style="margin-bottom:16px;color:#8b949e">
+    Enter any URL. The crawler will follow internal links, extract topic-relevant knowledge, discard original data, and flush caches. Only extracted Q&amp;A entries are kept.
+  </p>
+
+  <label for="siteURL">Website URL</label>
+  <input type="text" id="siteURL" placeholder="https://example.com/networking-guide">
+  <label for="siteTopic">Topic to Extract</label>
+  <input type="text" id="siteTopic" placeholder="e.g. Network Security">
+  <label for="siteKeywords">Keywords (comma-separated, optional)</label>
+  <input type="text" id="siteKeywords" placeholder="e.g. firewall, IDS, VPN">
+  <div style="display:flex;gap:16px;margin-bottom:12px">
+    <div><label for="siteMaxPages">Max Pages</label><input type="text" id="siteMaxPages" value="20" style="width:80px"></div>
+    <div><label for="siteMaxDepth">Max Depth</label><input type="text" id="siteMaxDepth" value="2" style="width:80px"></div>
+  </div>
+  <button class="btn btn-primary" onclick="runSiteCrawl()">🌐 Crawl Website</button>
+  <div id="site-status"></div>
+
+  <hr style="border-color:#30363d;margin:24px 0">
+  <h3 style="font-size:1rem;margin-bottom:12px">Crawl History</h3>
+  <div id="site-history"></div>
+  <button class="btn btn-gray" onclick="loadSiteStats()">🔄 Refresh History</button>
+  <button class="btn btn-red" onclick="clearSiteHistory()">🗑️ Clear History</button>
 </div>
 
 <!-- ══════════════ AI LEARNING ══════════════ -->
@@ -226,6 +288,74 @@ Crawl for network segmentation best practices"></textarea>
   </div>
 </div>
 
+<!-- ══════════════ ML ENGINE ══════════════ -->
+<div class="section" id="sec-mlengine">
+  <h2>ML Self-Growth &amp; Optimization Engine</h2>
+  <p style="margin-bottom:16px;color:#8b949e">
+    Control the AI's self-improvement mechanisms: auto-assessment, hyperparameter optimization, stability monitoring, and growth cycles.
+  </p>
+
+  <!-- Controls -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
+    <div class="card" style="padding:14px">
+      <div class="label">Auto-Optimize</div>
+      <label style="cursor:pointer"><input type="checkbox" id="mlAutoOptimize" onchange="saveMLConfig()"> Enable</label>
+    </div>
+    <div class="card" style="padding:14px">
+      <div class="label">Auto-Stabilize</div>
+      <label style="cursor:pointer"><input type="checkbox" id="mlAutoStabilize" onchange="saveMLConfig()"> Enable</label>
+    </div>
+    <div class="card" style="padding:14px">
+      <div class="label">Auto-Grow</div>
+      <label style="cursor:pointer"><input type="checkbox" id="mlAutoGrow" onchange="saveMLConfig()"> Enable</label>
+    </div>
+  </div>
+
+  <!-- Thresholds -->
+  <div style="display:flex;gap:16px;margin-bottom:16px">
+    <div>
+      <label for="mlMinAccuracy">Min Accuracy Threshold</label>
+      <input type="text" id="mlMinAccuracy" value="0.90" style="width:100px" onchange="saveMLConfig()">
+    </div>
+    <div>
+      <label for="mlConfThreshold">Confidence Threshold</label>
+      <input type="text" id="mlConfThreshold" value="0.60" style="width:100px" onchange="saveMLConfig()">
+    </div>
+    <div>
+      <label for="mlTargetAccuracy">Target Accuracy</label>
+      <input type="text" id="mlTargetAccuracy" value="0.98" style="width:100px" onchange="saveMLConfig()">
+    </div>
+  </div>
+
+  <!-- Action buttons -->
+  <div style="margin-bottom:16px">
+    <button class="btn btn-blue" onclick="mlAssess()">📊 Assess Model</button>
+    <button class="btn btn-primary" onclick="mlOptimize()">⚡ Optimize Model</button>
+    <button class="btn btn-orange" onclick="mlStabilize()">🛡️ Stabilize</button>
+    <button class="btn btn-blue" onclick="mlGrowthCheck()">📈 Growth Check</button>
+    <button class="btn btn-primary" onclick="mlGrowthCycle()">🔄 Full Growth Cycle</button>
+  </div>
+  <div id="ml-status"></div>
+
+  <hr style="border-color:#30363d;margin:24px 0">
+
+  <!-- Assessment Results -->
+  <h3 style="font-size:1rem;margin-bottom:12px">Model Assessment</h3>
+  <div id="ml-assessment"></div>
+
+  <hr style="border-color:#30363d;margin:24px 0">
+
+  <!-- History / Trend -->
+  <h3 style="font-size:1rem;margin-bottom:12px">Accuracy Trend</h3>
+  <div id="ml-trend" style="font-family:monospace;font-size:.85rem"></div>
+
+  <hr style="border-color:#30363d;margin:24px 0">
+
+  <!-- Recent Events -->
+  <h3 style="font-size:1rem;margin-bottom:12px">Recent Events</h3>
+  <div id="ml-events"></div>
+</div>
+
 <!-- ══════════════ KNOWLEDGE BROWSER ══════════════ -->
 <div class="section" id="sec-knowledge">
   <h2>Knowledge Browser</h2>
@@ -256,6 +386,9 @@ function showSection(name) {
   document.getElementById('nav-' + name).classList.add('active');
   if (name === 'knowledge') loadKnowledge();
   if (name === 'crawler') loadTopics();
+  if (name === 'forum') loadForumTopics();
+  if (name === 'sitecrawl') loadSiteStats();
+  if (name === 'mlengine') loadMLEngine();
 }
 
 function statusHTML(cls, msg) {
@@ -285,6 +418,9 @@ async function refreshStats() {
   document.getElementById('stat-total').textContent = d.total_entries;
   document.getElementById('stat-domains').textContent = d.domains.length;
   document.getElementById('last-crawl').textContent = d.crawler.last_crawl || 'Never';
+  if (d.ml_engine) {
+    document.getElementById('stat-cycles').textContent = d.ml_engine.cycle_count || 0;
+  }
 }
 async function retrain() {
   const el = document.getElementById('dashboard-status');
@@ -465,6 +601,230 @@ async function loadKnowledge() {
   document.getElementById('kbCount').textContent = `${d.total} entries`;
 }
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+/* ── Forum Crawler ── */
+async function loadForumTopics() {
+  const d = await api('/admin/forum/topics');
+  const el = document.getElementById('forum-topic-list');
+  const topics = d.topics || [];
+  if (!topics.length) { el.innerHTML = '<p style="color:#8b949e">No forum crawler topics configured.</p>'; }
+  else {
+    el.innerHTML = topics.map(t => `
+      <div class="topic-item">
+        <span class="name">${esc(t.name)}</span>
+        <span class="keywords">${(t.keywords||[]).join(', ') || '—'}</span>
+        <span style="color:#8b949e;font-size:.8rem">${(t.sources||[]).join(', ')}</span>
+        <span class="badge ${t.enabled?'badge-on':'badge-off'}" onclick="toggleForumTopic('${esc(t.name)}')" style="cursor:pointer">${t.enabled?'ON':'OFF'}</span>
+        <button class="btn btn-blue" style="padding:4px 10px;font-size:.8rem;margin:0" onclick="runOneForumTopic('${esc(t.name)}')">▶ Run</button>
+        <button class="btn btn-red" style="padding:4px 10px;font-size:.8rem;margin:0" onclick="removeForumTopic('${esc(t.name)}')">✕</button>
+      </div>
+    `).join('');
+  }
+  // Stats
+  const stats = d.stats || {};
+  const statsEl = document.getElementById('forum-stats');
+  const statKeys = Object.keys(stats);
+  if (statKeys.length) {
+    statsEl.innerHTML = statKeys.map(k => {
+      const s = stats[k];
+      return `<div class="topic-item"><span class="name">${esc(k)}</span><span style="color:#3fb950">${s.total_crawled||0} entries</span><span style="color:#8b949e">${s.crawl_count||0} crawls</span><span style="color:#8b949e;font-size:.8rem">${s.last_crawl?new Date(s.last_crawl).toLocaleString():'Never'}</span></div>`;
+    }).join('');
+  } else { statsEl.innerHTML = '<p style="color:#8b949e">No forum crawl history yet.</p>'; }
+}
+async function addForumTopic() {
+  const name = document.getElementById('forumTopicName').value.trim();
+  if (!name) return;
+  const kw = document.getElementById('forumTopicKeywords').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const max = parseInt(document.getElementById('forumTopicMax').value) || 10;
+  const sources = [];
+  if (document.getElementById('srcSE').checked) sources.push('stackexchange');
+  if (document.getElementById('srcReddit').checked) sources.push('reddit');
+  await postJSON('/admin/forum/add-topic', {name, keywords:kw, max_per_source:max, sources});
+  document.getElementById('forumTopicName').value = '';
+  document.getElementById('forumTopicKeywords').value = '';
+  loadForumTopics();
+}
+async function removeForumTopic(name) {
+  if (!confirm(`Remove forum topic "${name}"?`)) return;
+  await postJSON('/admin/forum/remove-topic', {name});
+  loadForumTopics();
+}
+async function toggleForumTopic(name) {
+  await postJSON('/admin/forum/toggle-topic', {name});
+  loadForumTopics();
+}
+async function runOneForumTopic(topic) {
+  const el = document.getElementById('forum-status');
+  el.innerHTML = spinnerHTML(`Crawling forums for "${topic}"… may take 1-2 minutes.`);
+  const d = await postJSON('/admin/forum/run-topic', {topic});
+  if (d.status === 'success') {
+    el.innerHTML = resultBox('success', `✅ Forum crawl "${topic}": ${d.entries} new entries\n\nSamples:\n${(d.samples||[]).map(s=>`Q: ${s.question}\nA: ${s.answer?.substring(0,150)}…`).join('\n\n')}`);
+    refreshStats(); loadForumTopics();
+  } else { el.innerHTML = resultBox('warning', `⚠️ ${d.status}`); }
+}
+async function runAllForums() {
+  const el = document.getElementById('forum-status');
+  el.innerHTML = spinnerHTML('Running all forum crawlers… this may take several minutes.');
+  const d = await postJSON('/admin/forum/run', {});
+  let lines = [`Total new entries: ${d.total_new_entries}\n`];
+  for (const [name, info] of Object.entries(d.topics || {})) {
+    lines.push(`${name}: ${info.status} (${info.entries} entries)`);
+  }
+  el.innerHTML = resultBox(d.total_new_entries > 0 ? 'success' : 'warning', lines.join('\n'));
+  refreshStats(); loadForumTopics();
+}
+
+/* ── Site/URL Crawler ── */
+async function runSiteCrawl() {
+  const url = document.getElementById('siteURL').value.trim();
+  const topic = document.getElementById('siteTopic').value.trim();
+  if (!url || !topic) { alert('URL and topic are required'); return; }
+  const kw = document.getElementById('siteKeywords').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const maxPages = parseInt(document.getElementById('siteMaxPages').value) || 20;
+  const maxDepth = parseInt(document.getElementById('siteMaxDepth').value) || 2;
+  const el = document.getElementById('site-status');
+  el.innerHTML = spinnerHTML(`Crawling ${url}… extracting "${topic}" knowledge. This may take 1-3 minutes.`);
+  const d = await postJSON('/admin/site-crawl', {url, topic, keywords:kw, max_pages:maxPages, max_depth:maxDepth});
+  if (d.status === 'success') {
+    const st = d.stats || {};
+    el.innerHTML = resultBox('success', `✅ Site crawl complete!\n\nPages crawled: ${st.pages_crawled||0}\nPages relevant: ${st.pages_relevant||0}\nEntries extracted: ${d.entries}\nOriginal data: DISCARDED ✓\n\nSamples:\n${(d.samples||[]).map(s=>`Q: ${s.question}\nA: ${s.answer?.substring(0,150)}…`).join('\n\n')}`);
+    document.getElementById('siteURL').value = '';
+    refreshStats(); loadSiteStats();
+  } else if (d.error) {
+    el.innerHTML = resultBox('error', `❌ ${d.error}`);
+  } else {
+    el.innerHTML = resultBox('warning', `⚠️ No relevant content found on this site for "${topic}".`);
+  }
+}
+async function loadSiteStats() {
+  const d = await api('/admin/site-crawl/stats');
+  const el = document.getElementById('site-history');
+  const jobs = d.recent_jobs || [];
+  if (!jobs.length) { el.innerHTML = '<p style="color:#8b949e">No site crawl history.</p>'; return; }
+  el.innerHTML = `<p style="margin-bottom:8px;color:#3fb950">Total: ${d.total_entries} entries from ${d.total_jobs} crawls across ${d.domains_crawled.length} domains</p>` +
+    jobs.reverse().map(j => `
+    <div class="topic-item">
+      <span class="name" style="flex:2">${esc(j.domain)}</span>
+      <span style="color:#58a6ff">${esc(j.topic)}</span>
+      <span style="color:#3fb950">${j.entries_extracted} entries</span>
+      <span style="color:#8b949e;font-size:.8rem">${j.stats?.pages_crawled||0} pages</span>
+      <span style="color:#8b949e;font-size:.75rem">${new Date(j.crawled_at).toLocaleString()}</span>
+    </div>
+  `).join('');
+}
+async function clearSiteHistory() {
+  if (!confirm('Clear all site crawl history? (Knowledge files are kept)')) return;
+  await postJSON('/admin/site-crawl/clear', {});
+  loadSiteStats();
+}
+
+/* ── ML Engine ── */
+async function loadMLEngine() {
+  const d = await api('/admin/ml/stats');
+  const cfg = d.config || {};
+  document.getElementById('mlAutoOptimize').checked = cfg.auto_optimize !== false;
+  document.getElementById('mlAutoStabilize').checked = cfg.auto_stabilize !== false;
+  document.getElementById('mlAutoGrow').checked = cfg.auto_grow !== false;
+  document.getElementById('mlMinAccuracy').value = cfg.min_accuracy_threshold || 0.90;
+  document.getElementById('mlConfThreshold').value = cfg.confidence_threshold || 0.60;
+  const gt = cfg.growth_targets || {};
+  document.getElementById('mlTargetAccuracy').value = gt.target_accuracy || 0.98;
+
+  // Trend
+  const trend = d.accuracy_trend || [];
+  const trendEl = document.getElementById('ml-trend');
+  if (trend.length) {
+    trendEl.innerHTML = trend.map(t => {
+      const pct = (t.accuracy * 100).toFixed(1);
+      const bar = '█'.repeat(Math.round(t.accuracy * 30));
+      return `<div>${new Date(t.timestamp).toLocaleString()} | ${bar} ${pct}% [${t.type}]</div>`;
+    }).join('');
+  } else { trendEl.innerHTML = '<p style="color:#8b949e">No accuracy history yet. Run an assessment first.</p>'; }
+
+  // Events
+  const events = d.recent_events || [];
+  const evEl = document.getElementById('ml-events');
+  if (events.length) {
+    evEl.innerHTML = events.reverse().map(e => `
+      <div class="topic-item">
+        <span class="badge ${e.type==='growth_cycle'?'badge-on':'badge-off'}">${e.type}</span>
+        <span style="color:#8b949e;font-size:.85rem">${Object.entries(e).filter(([k])=>!['timestamp','type'].includes(k)).map(([k,v])=>`${k}: ${typeof v==='number'?(v*100).toFixed(1)+'%':JSON.stringify(v)}`).join(' | ')}</span>
+        <span style="color:#8b949e;font-size:.75rem">${new Date(e.timestamp).toLocaleString()}</span>
+      </div>
+    `).join('');
+  } else { evEl.innerHTML = '<p style="color:#8b949e">No ML events yet.</p>'; }
+
+  document.getElementById('stat-cycles').textContent = d.cycle_count || 0;
+}
+async function saveMLConfig() {
+  await postJSON('/admin/ml/config', {
+    auto_optimize: document.getElementById('mlAutoOptimize').checked,
+    auto_stabilize: document.getElementById('mlAutoStabilize').checked,
+    auto_grow: document.getElementById('mlAutoGrow').checked,
+    min_accuracy_threshold: parseFloat(document.getElementById('mlMinAccuracy').value) || 0.90,
+    confidence_threshold: parseFloat(document.getElementById('mlConfThreshold').value) || 0.60,
+    growth_targets: { target_accuracy: parseFloat(document.getElementById('mlTargetAccuracy').value) || 0.98 },
+  });
+}
+async function mlAssess() {
+  const el = document.getElementById('ml-status');
+  el.innerHTML = spinnerHTML('Assessing model quality…');
+  const d = await postJSON('/admin/ml/assess', {});
+  if (d.status === 'ok') {
+    document.getElementById('stat-accuracy').textContent = (d.overall_accuracy*100).toFixed(1)+'%';
+    let domLines = Object.entries(d.domains||{}).map(([dom, s])=>`  ${dom}: ${(s.accuracy*100).toFixed(1)}% acc, ${(s.avg_confidence*100).toFixed(1)}% conf (${s.low_confidence_count} low-conf)`).join('\n');
+    const asEl = document.getElementById('ml-assessment');
+    asEl.innerHTML = resultBox('success', `Overall Accuracy: ${(d.overall_accuracy*100).toFixed(1)}%\nAvg Confidence: ${(d.avg_confidence*100).toFixed(1)}%\nTotal Entries: ${d.total_entries}\nClasses: ${d.total_classes}\nWeak Domains: ${d.weak_domains.length? d.weak_domains.join(', ') : 'None'}\n\nDomain Breakdown:\n${domLines}`);
+    el.innerHTML = statusHTML('ok', '✅ Assessment complete');
+    loadMLEngine();
+  } else { el.innerHTML = statusHTML('err', `❌ ${d.message || d.status}`); }
+}
+async function mlOptimize() {
+  const el = document.getElementById('ml-status');
+  el.innerHTML = spinnerHTML('Optimizing model… trying multiple hyperparameter configs. This may take several minutes.');
+  const d = await postJSON('/admin/ml/optimize', {});
+  if (d.status === 'success') {
+    let lines = [`Best accuracy: ${(d.best_accuracy*100).toFixed(1)}%\nBest config: ${JSON.stringify(d.best_config)}\n`];
+    for (const r of d.results||[]) {
+      lines.push(`  ${JSON.stringify(r.config)}: ${r.status === 'ok'? (r.accuracy*100).toFixed(1)+'%' : r.status}`);
+    }
+    el.innerHTML = resultBox('success', `✅ Optimization complete!\n\n${lines.join('\n')}`);
+    refreshStats(); loadMLEngine();
+  } else { el.innerHTML = resultBox('error', `❌ ${d.error || d.status}`); }
+}
+async function mlStabilize() {
+  const el = document.getElementById('ml-status');
+  el.innerHTML = spinnerHTML('Checking model stability…');
+  const d = await postJSON('/admin/ml/stabilize', {});
+  el.innerHTML = resultBox(d.status==='stable'?'success':'warning', `${d.message || d.status}\n\nAction: ${d.action}`);
+  loadMLEngine();
+}
+async function mlGrowthCheck() {
+  const el = document.getElementById('ml-status');
+  el.innerHTML = spinnerHTML('Checking growth needs…');
+  const d = await postJSON('/admin/ml/growth-check', {});
+  if (d.status === 'ok') {
+    let lines = [`Accuracy: ${(d.accuracy*100).toFixed(1)}% | Entries: ${d.entries} | Domains: ${d.domains}\n`];
+    if (d.suggestions.length) {
+      lines.push('Suggestions:');
+      for (const s of d.suggestions) { lines.push(`  [${s.priority}] ${s.message}`); }
+    } else { lines.push('✅ No growth needed — model is healthy!'); }
+    el.innerHTML = resultBox(d.needs_growth?'warning':'success', lines.join('\n'));
+  } else { el.innerHTML = resultBox('error', `❌ ${d.status}`); }
+}
+async function mlGrowthCycle() {
+  const el = document.getElementById('ml-status');
+  el.innerHTML = spinnerHTML('Running full growth cycle (assess → stabilize → optimize)… may take several minutes.');
+  const d = await postJSON('/admin/ml/growth-cycle', {});
+  if (d.status === 'success') {
+    let lines = [`Final Accuracy: ${(d.final_accuracy*100).toFixed(1)}%\nImprovement: ${d.improvement>=0?'+':''}${(d.improvement*100).toFixed(2)}%\n\nSteps:`];
+    for (const s of d.steps||[]) {
+      lines.push(`  ${s.step}: ${JSON.stringify(s)}`);
+    }
+    el.innerHTML = resultBox('success', `✅ Growth cycle complete!\n\n${lines.join('\n')}`);
+    refreshStats(); loadMLEngine();
+  } else { el.innerHTML = resultBox('error', `❌ ${d.status}`); }
+}
 
 /* ── Init ── */
 loadTopics();
