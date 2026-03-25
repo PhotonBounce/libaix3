@@ -2,8 +2,11 @@ name: Knowledge Crawler
 
 on:
   schedule:
-    # Every 2 hours at :30 (offset from auto-train at :00)
-    - cron: "30 */2 * * *"
+    # Every 15 minutes offset from training (at :07 and :37)
+    - cron: "7 * * * *"
+    - cron: "22 * * * *"
+    - cron: "37 * * * *"
+    - cron: "52 * * * *"
   workflow_dispatch:
     inputs:
       topic:

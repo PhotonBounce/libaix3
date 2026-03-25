@@ -1,25 +1,18 @@
 name: Auto-Train Knowledge AI
 
-# MAXIMUM TRAINING SCHEDULE
-# Runs 12x/day (every 2 hours) + on every knowledge push + manual dispatch.
-# 3 parallel configs per run = 36 training sessions/day.
+# MAXIMUM TRAINING SCHEDULE — EVERY 15 MINUTES
+# Runs 96x/day (every 15 min) + on every knowledge push + manual dispatch.
+# 8 parallel configs per run = 768 training sessions/day.
 # Public repos get unlimited GitHub Actions minutes.
-# Each run ≈ 3-5 min × 3 configs × 12/day ≈ ~180 min/day of compute.
+# GitHub may throttle some runs under high load — that's fine, we catch up.
 
 on:
   schedule:
-    - cron: "0 0 * * *"           # 00:00 UTC
-    - cron: "0 2 * * *"           # 02:00 UTC
-    - cron: "0 4 * * *"           # 04:00 UTC
-    - cron: "0 6 * * *"           # 06:00 UTC
-    - cron: "0 8 * * *"           # 08:00 UTC
-    - cron: "0 10 * * *"          # 10:00 UTC
-    - cron: "0 12 * * *"          # 12:00 UTC
-    - cron: "0 14 * * *"          # 14:00 UTC
-    - cron: "0 16 * * *"          # 16:00 UTC
-    - cron: "0 18 * * *"          # 18:00 UTC
-    - cron: "0 20 * * *"          # 20:00 UTC
-    - cron: "0 22 * * *"          # 22:00 UTC
+    # Every 15 minutes, 24/7
+    - cron: "0 * * * *"
+    - cron: "15 * * * *"
+    - cron: "30 * * * *"
+    - cron: "45 * * * *"
   push:
     paths:
       - "knowledge_base.py"
@@ -52,7 +45,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # Train 5 configs in parallel — best model wins
+        # Train 8 configs in parallel — best model wins
         include:
           - name: "tanh-adam-5k"
             activation: "tanh"
@@ -83,6 +76,24 @@ jobs:
             optimizer: "adam"
             epochs: 10000
             lr: 0.003
+            hidden: 256
+          - name: "tanh-adam-15k-deep"
+            activation: "tanh"
+            optimizer: "adam"
+            epochs: 15000
+            lr: 0.002
+            hidden: 512
+          - name: "relu-adam-10k-wide"
+            activation: "relu"
+            optimizer: "adam"
+            epochs: 10000
+            lr: 0.003
+            hidden: 512
+          - name: "tanh-adam-20k-ultra"
+            activation: "tanh"
+            optimizer: "adam"
+            epochs: 20000
+            lr: 0.001
             hidden: 256
     steps:
       - uses: actions/checkout@v4
@@ -224,7 +235,5 @@ jobs:
           Trained on $(python -c "from knowledge_base import KNOWLEDGE; print(len(KNOWLEDGE))") knowledge entries
           $(python -c "import json; d=json.load(open('models/answer_map.json')); print(f'{len(d)} answer classes')")
           $(python -c "import json; d=json.load(open('models/vectorizer.json')); print(f'{len(d[\"vocab\"])} vocab words')")"
-            git push
-          fi
             git push
           fi
