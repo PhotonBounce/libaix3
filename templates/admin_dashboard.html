@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>libaix Admin Dashboard</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  background:#0d1117;color:#c9d1d9;display:flex;min-height:100vh}
+
+/* ── Sidebar ── */
+.sidebar{width:220px;background:#161b22;border-right:1px solid #30363d;padding:20px 0;flex-shrink:0;position:fixed;height:100vh;overflow-y:auto}
+.sidebar h2{padding:0 20px;color:#58a6ff;font-size:1.1rem;margin-bottom:4px}
+.sidebar .sub{padding:0 20px;color:#8b949e;font-size:.75rem;margin-bottom:20px}
+.sidebar a{display:block;padding:10px 20px;color:#c9d1d9;text-decoration:none;font-size:.9rem;border-left:3px solid transparent}
+.sidebar a:hover,.sidebar a.active{background:#1c2128;border-left-color:#58a6ff;color:#58a6ff}
+.sidebar .logout{margin-top:auto;border-top:1px solid #30363d;padding-top:10px}
+.sidebar .logout a{color:#da3633}
+
+/* ── Main ── */
+.main{margin-left:220px;padding:24px;flex:1;max-width:1100px}
+h1{font-size:1.5rem;margin-bottom:8px;color:#e6edf3}
+.breadcrumb{color:#8b949e;font-size:.85rem;margin-bottom:24px}
+
+/* ── Cards ── */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:28px}
+.card{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:20px}
+.card .label{color:#8b949e;font-size:.8rem;margin-bottom:4px}
+.card .value{font-size:1.8rem;font-weight:700;color:#58a6ff}
+.card .value.green{color:#3fb950}
+.card .value.purple{color:#bc8cff}
+.card .value.orange{color:#d29922}
+
+/* ── Sections ── */
+.section{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:24px;margin-bottom:20px;display:none}
+.section.active{display:block}
+.section h2{font-size:1.2rem;margin-bottom:16px;color:#e6edf3;border-bottom:1px solid #30363d;padding-bottom:8px}
+
+/* ── Forms ── */
+label{display:block;margin-bottom:4px;color:#8b949e;font-size:.85rem}
+input[type=text],textarea,select{width:100%;padding:10px;border:1px solid #30363d;border-radius:6px;
+  background:#0d1117;color:#c9d1d9;font-size:.95rem;margin-bottom:12px;outline:none;font-family:inherit}
+input:focus,textarea:focus,select:focus{border-color:#58a6ff}
+textarea{min-height:120px;resize:vertical}
+.btn{padding:10px 20px;border:none;border-radius:6px;font-size:.9rem;cursor:pointer;font-weight:600;display:inline-block;margin-right:8px;margin-bottom:8px}
+.btn-primary{background:#238636;color:#fff}.btn-primary:hover{background:#2ea043}
+.btn-blue{background:#1f6feb;color:#fff}.btn-blue:hover{background:#388bfd}
+.btn-orange{background:#9e6a03;color:#fff}.btn-orange:hover{background:#bb8009}
+.btn-red{background:#da3633;color:#fff}.btn-red:hover{background:#f85149}
+.btn-gray{background:#30363d;color:#c9d1d9}.btn-gray:hover{background:#484f58}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* ── Upload area ── */
+.drop-zone{border:2px dashed #30363d;border-radius:10px;padding:40px;text-align:center;color:#8b949e;
+  cursor:pointer;transition:all .2s;margin-bottom:16px}
+.drop-zone:hover,.drop-zone.drag-over{border-color:#58a6ff;background:#161b22;color:#58a6ff}
+.drop-zone input{display:none}
+
+/* ── Results ── */
+.result-box{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:16px;margin-top:12px;
+  font-size:.88rem;max-height:400px;overflow-y:auto;white-space:pre-wrap;word-break:break-word}
+.result-box.success{border-color:#238636}
+.result-box.error{border-color:#da3633}
+.result-box.warning{border-color:#d29922}
+
+/* ── Topic list ── */
+.topic-item{display:flex;align-items:center;gap:10px;padding:10px;background:#0d1117;border:1px solid #30363d;
+  border-radius:6px;margin-bottom:8px}
+.topic-item .name{flex:1;font-weight:600}
+.topic-item .keywords{color:#8b949e;font-size:.8rem;flex:2}
+.topic-item .badge{padding:2px 8px;border-radius:4px;font-size:.75rem;font-weight:600}
+.badge-on{background:#238636;color:#fff}
+.badge-off{background:#484f58;color:#8b949e}
+
+/* ── Knowledge table ── */
+.k-table{width:100%;border-collapse:collapse;font-size:.85rem}
+.k-table th,.k-table td{padding:8px 10px;border-bottom:1px solid #21262d;text-align:left;vertical-align:top}
+.k-table th{color:#8b949e;font-weight:600;position:sticky;top:0;background:#161b22}
+.k-table td{color:#c9d1d9}
+.k-table .domain-tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.75rem;background:#1c2128;color:#58a6ff}
+.k-scroll{max-height:500px;overflow-y:auto}
+
+/* ── Status ── */
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid #30363d;border-top-color:#58a6ff;
+  border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.status-msg{margin-top:12px;font-size:.9rem}
+.status-msg.ok{color:#3fb950}
+.status-msg.err{color:#f85149}
+.status-msg.warn{color:#d29922}
+
+/* ── Responsive ── */
+@media(max-width:768px){.sidebar{display:none}.main{margin-left:0}}
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav class="sidebar">
+  <h2>🧠 libaix</h2>
+  <p class="sub">Admin Dashboard</p>
+  <a href="#" onclick="showSection('dashboard')" class="active" id="nav-dashboard">📊 Dashboard</a>
+  <a href="#" onclick="showSection('upload')" id="nav-upload">📁 Upload &amp; Extract</a>
+  <a href="#" onclick="showSection('crawler')" id="nav-crawler">🕷️ Crawler</a>
+  <a href="#" onclick="showSection('learn')" id="nav-learn">🎓 AI Learning</a>
+  <a href="#" onclick="showSection('knowledge')" id="nav-knowledge">📚 Knowledge Browser</a>
+  <div class="logout"><a href="/admin/logout">🚪 Sign Out</a></div>
+</nav>
+
+<!-- Main content -->
+<div class="main">
+
+<h1>Admin Dashboard</h1>
+<p class="breadcrumb">Logged in as <strong>{{ session.admin_user }}</strong> · libaix Knowledge Management</p>
+
+<!-- ── Stat cards ── -->
+<div class="cards">
+  <div class="card"><div class="label">Built-in Entries</div><div class="value" id="stat-builtin">{{ knowledge_count }}</div></div>
+  <div class="card"><div class="label">Crawled / Uploaded</div><div class="value green" id="stat-extra">{{ extra_count }}</div></div>
+  <div class="card"><div class="label">Total Knowledge</div><div class="value purple" id="stat-total">{{ total_count }}</div></div>
+  <div class="card"><div class="label">Domains</div><div class="value orange" id="stat-domains">{{ domains|length }}</div></div>
+</div>
+
+<!-- ══════════════ DASHBOARD ══════════════ -->
+<div class="section active" id="sec-dashboard">
+  <h2>Overview</h2>
+  <p style="margin-bottom:12px">Knowledge domains: <strong>{{ domains|join(', ') }}</strong></p>
+  <p style="margin-bottom:16px">Last crawl: <strong id="last-crawl">{{ crawler_config.last_crawl or 'Never' }}</strong></p>
+  <button class="btn btn-primary" onclick="retrain()">🔄 Retrain Model Now</button>
+  <button class="btn btn-blue" onclick="refreshStats()">📊 Refresh Stats</button>
+  <div id="dashboard-status"></div>
+</div>
+
+<!-- ══════════════ UPLOAD & EXTRACT ══════════════ -->
+<div class="section" id="sec-upload">
+  <h2>Upload Files &amp; Paste Text</h2>
+  <p style="margin-bottom:16px;color:#8b949e">Upload PDF, TXT, CSV, MD, or paste text. Knowledge is extracted automatically and the original file is <strong>deleted</strong> to save space.</p>
+
+  <!-- File upload -->
+  <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+    <p style="font-size:1.1rem;margin-bottom:6px">📄 Drop files here or click to browse</p>
+    <p style="font-size:.8rem">Supported: PDF, TXT, MD, CSV, LOG, CONF, HTML, XML, JSON</p>
+    <input type="file" id="fileInput" accept=".txt,.md,.pdf,.csv,.log,.conf,.cfg,.ini,.json,.xml,.html" multiple>
+  </div>
+  <label for="uploadDomain">Domain hint (optional)</label>
+  <input type="text" id="uploadDomain" placeholder="e.g. wifi_security, networking, security...">
+  <div id="upload-status"></div>
+
+  <hr style="border-color:#30363d;margin:24px 0">
+
+  <!-- Text paste -->
+  <h2 style="font-size:1.1rem;margin-bottom:12px">Or Paste Text</h2>
+  <label for="pasteText">Paste text content (definitions, articles, documentation…)</label>
+  <textarea id="pasteText" placeholder="Paste network/security content here. The AI will extract Q&A knowledge automatically..."></textarea>
+  <label for="pasteDomain">Domain hint (optional)</label>
+  <input type="text" id="pasteDomain" placeholder="e.g. wifi, troubleshooting...">
+  <button class="btn btn-primary" onclick="submitPaste()">🧠 Extract Knowledge from Text</button>
+  <div id="paste-status"></div>
+
+  <hr style="border-color:#30363d;margin:24px 0">
+
+  <!-- Manual entry -->
+  <h2 style="font-size:1.1rem;margin-bottom:12px">Manual Q&amp;A Entry</h2>
+  <label for="manualQ">Question</label>
+  <input type="text" id="manualQ" placeholder="What is WPA3-Enterprise?">
+  <label for="manualA">Answer</label>
+  <textarea id="manualA" style="min-height:80px" placeholder="WPA3-Enterprise provides 192-bit minimum security..."></textarea>
+  <label for="manualD">Domain</label>
+  <input type="text" id="manualD" placeholder="Auto-detected if blank">
+  <button class="btn btn-primary" onclick="submitManual()">➕ Add Entry</button>
+  <div id="manual-status"></div>
+</div>
+
+<!-- ══════════════ CRAWLER ══════════════ -->
+<div class="section" id="sec-crawler">
+  <h2>Crawler Management</h2>
+  <p style="margin-bottom:16px;color:#8b949e">Configure topics for the Wikipedia knowledge crawler. Runs every 2 hours via GitHub Actions or manually from here.</p>
+
+  <div id="topic-list"></div>
+
+  <h3 style="margin:20px 0 12px;font-size:1rem">Add New Crawler Topic</h3>
+  <label for="newTopicName">Topic Name</label>
+  <input type="text" id="newTopicName" placeholder="e.g. VLAN Trunking Protocol">
+  <label for="newTopicKeywords">Keywords (comma-separated)</label>
+  <input type="text" id="newTopicKeywords" placeholder="e.g. VTP, VLAN trunking, trunk port">
+  <label for="newTopicMax">Max Articles</label>
+  <input type="text" id="newTopicMax" value="8" style="width:80px">
+  <button class="btn btn-primary" onclick="addTopic()">➕ Add Topic</button>
+
+  <hr style="border-color:#30363d;margin:24px 0">
+  <button class="btn btn-orange" onclick="runAllCrawlers()">🕷️ Run All Crawlers Now</button>
+  <div id="crawler-status"></div>
+</div>
+
+<!-- ══════════════ AI LEARNING ══════════════ -->
+<div class="section" id="sec-learn">
+  <h2>AI Learning Prompts</h2>
+  <p style="margin-bottom:16px;color:#8b949e">Command the AI to learn about new topics. It will crawl Wikipedia, extract knowledge, and add it to the training data.</p>
+
+  <label for="learnPrompt">Learning Command</label>
+  <textarea id="learnPrompt" style="min-height:80px" placeholder="Examples:
+Learn about OSPF routing protocol
+Research zero trust network architecture
+Study WPA3 Enterprise encryption
+Crawl for network segmentation best practices"></textarea>
+  <label for="learnKeywords">Additional keywords (comma-separated, optional)</label>
+  <input type="text" id="learnKeywords" placeholder="e.g. link-state, Dijkstra, area 0">
+  <button class="btn btn-primary" onclick="submitLearn()">🎓 Execute Learning Command</button>
+  <button class="btn btn-blue" onclick="submitLearnAndTrain()">🎓+🔄 Learn &amp; Retrain</button>
+  <div id="learn-status"></div>
+
+  <hr style="border-color:#30363d;margin:24px 0">
+  <h3 style="font-size:1rem;margin-bottom:12px">Quick Learn Buttons</h3>
+  <div id="quick-learns">
+    <button class="btn btn-gray" onclick="quickLearn('DHCP Snooping')">DHCP Snooping</button>
+    <button class="btn btn-gray" onclick="quickLearn('Network Load Balancing')">Load Balancing</button>
+    <button class="btn btn-gray" onclick="quickLearn('Software Defined Networking')">SDN</button>
+    <button class="btn btn-gray" onclick="quickLearn('Wi-Fi 6E technology')">Wi-Fi 6E</button>
+    <button class="btn btn-gray" onclick="quickLearn('Cisco IOS commands')">Cisco IOS</button>
+    <button class="btn btn-gray" onclick="quickLearn('Network Address Translation')">NAT Deep Dive</button>
+    <button class="btn btn-gray" onclick="quickLearn('RADIUS authentication protocol')">RADIUS</button>
+    <button class="btn btn-gray" onclick="quickLearn('SSL TLS certificate management')">TLS/SSL Certs</button>
+    <button class="btn btn-gray" onclick="quickLearn('Wireless site survey planning')">Site Survey</button>
+    <button class="btn btn-gray" onclick="quickLearn('SIEM security monitoring')">SIEM</button>
+  </div>
+</div>
+
+<!-- ══════════════ KNOWLEDGE BROWSER ══════════════ -->
+<div class="section" id="sec-knowledge">
+  <h2>Knowledge Browser</h2>
+  <label for="kbDomain">Filter by Domain</label>
+  <select id="kbDomain" onchange="loadKnowledge()">
+    <option value="">All Domains</option>
+    {% for d in domains %}
+    <option value="{{ d }}">{{ d }}</option>
+    {% endfor %}
+  </select>
+  <div class="k-scroll">
+    <table class="k-table">
+      <thead><tr><th style="width:30%">Question</th><th style="width:50%">Answer</th><th>Domain</th><th>Source</th></tr></thead>
+      <tbody id="kbBody"></tbody>
+    </table>
+  </div>
+  <p style="margin-top:8px;color:#8b949e;font-size:.85rem" id="kbCount"></p>
+</div>
+
+</div><!-- /main -->
+
+<script>
+/* ── Navigation ── */
+function showSection(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
+  document.getElementById('sec-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  if (name === 'knowledge') loadKnowledge();
+  if (name === 'crawler') loadTopics();
+}
+
+function statusHTML(cls, msg) {
+  return `<div class="status-msg ${cls}">${msg}</div>`;
+}
+function spinnerHTML(msg) {
+  return `<div class="status-msg"><span class="spinner"></span>${msg}</div>`;
+}
+function resultBox(cls, content) {
+  return `<div class="result-box ${cls}">${content}</div>`;
+}
+
+/* ── API helper ── */
+async function api(url, opts = {}) {
+  const res = await fetch(url, opts);
+  return res.json();
+}
+async function postJSON(url, body) {
+  return api(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+}
+
+/* ── Dashboard ── */
+async function refreshStats() {
+  const d = await api('/admin/api/stats');
+  document.getElementById('stat-builtin').textContent = d.builtin_entries;
+  document.getElementById('stat-extra').textContent = d.extra_entries;
+  document.getElementById('stat-total').textContent = d.total_entries;
+  document.getElementById('stat-domains').textContent = d.domains.length;
+  document.getElementById('last-crawl').textContent = d.crawler.last_crawl || 'Never';
+}
+async function retrain() {
+  const el = document.getElementById('dashboard-status');
+  el.innerHTML = spinnerHTML('Retraining model… this may take a minute.');
+  const d = await postJSON('/admin/retrain', {});
+  if (d.status === 'success') {
+    el.innerHTML = statusHTML('ok', `✅ ${d.message}`);
+    refreshStats();
+  } else {
+    el.innerHTML = statusHTML('err', `❌ ${d.error}`);
+  }
+}
+
+/* ── File Upload ── */
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  if (e.dataTransfer.files.length) uploadFiles(e.dataTransfer.files);
+});
+fileInput.addEventListener('change', () => { if (fileInput.files.length) uploadFiles(fileInput.files); });
+
+async function uploadFiles(files) {
+  const el = document.getElementById('upload-status');
+  const domain = document.getElementById('uploadDomain').value;
+  let html = '';
+  for (const file of files) {
+    el.innerHTML = spinnerHTML(`Extracting knowledge from ${file.name}…`);
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('domain', domain);
+    const res = await fetch('/admin/upload', {method:'POST', body: fd});
+    const d = await res.json();
+    if (d.status === 'success') {
+      html += resultBox('success', `✅ <strong>${file.name}</strong>: ${d.entries_extracted} entries extracted\n\nSamples:\n${(d.samples||[]).map(s => `Q: ${s.question}\nA: ${s.answer}\nDomain: ${s.domain}`).join('\n\n')}`);
+    } else if (d.status === 'warning') {
+      html += resultBox('warning', `⚠️ ${file.name}: ${d.message}`);
+    } else {
+      html += resultBox('error', `❌ ${file.name}: ${d.error || 'Unknown error'}`);
+    }
+  }
+  el.innerHTML = html;
+  refreshStats();
+}
+
+/* ── Paste ── */
+async function submitPaste() {
+  const text = document.getElementById('pasteText').value.trim();
+  if (!text) return;
+  const el = document.getElementById('paste-status');
+  el.innerHTML = spinnerHTML('Extracting knowledge…');
+  const d = await postJSON('/admin/paste', {text, domain: document.getElementById('pasteDomain').value});
+  if (d.status === 'success') {
+    el.innerHTML = resultBox('success', `✅ Extracted ${d.entries_extracted} entries\n\n${(d.samples||[]).map(s => `Q: ${s.question}\nA: ${s.answer}`).join('\n\n')}`);
+    refreshStats();
+  } else {
+    el.innerHTML = resultBox('warning', `⚠️ ${d.message || 'No entries extracted'}`);
+  }
+}
+
+/* ── Manual entry ── */
+async function submitManual() {
+  const q = document.getElementById('manualQ').value.trim();
+  const a = document.getElementById('manualA').value.trim();
+  const dom = document.getElementById('manualD').value.trim();
+  if (!q || !a) { alert('Both question and answer required'); return; }
+  const el = document.getElementById('manual-status');
+  el.innerHTML = spinnerHTML('Adding…');
+  const d = await postJSON('/admin/add-entry', {question:q, answer:a, domain:dom});
+  if (d.status === 'success') {
+    el.innerHTML = statusHTML('ok', `✅ Added: "${d.entry.question}" [${d.entry.domain}]`);
+    document.getElementById('manualQ').value = '';
+    document.getElementById('manualA').value = '';
+    refreshStats();
+  } else {
+    el.innerHTML = statusHTML('err', `❌ ${d.error}`);
+  }
+}
+
+/* ── Crawler ── */
+async function loadTopics() {
+  const topics = await api('/admin/crawler/topics');
+  const el = document.getElementById('topic-list');
+  if (!topics.length) { el.innerHTML = '<p style="color:#8b949e">No crawler topics configured.</p>'; return; }
+  el.innerHTML = topics.map(t => `
+    <div class="topic-item">
+      <span class="name">${t.name}</span>
+      <span class="keywords">${(t.keywords||[]).join(', ') || '—'}</span>
+      <span class="badge ${t.enabled?'badge-on':'badge-off'}" onclick="toggleTopic('${t.name}')" style="cursor:pointer">${t.enabled?'ON':'OFF'}</span>
+      <button class="btn btn-blue" style="padding:4px 10px;font-size:.8rem;margin:0" onclick="runOneTopic('${t.name}')">▶ Run</button>
+      <button class="btn btn-red" style="padding:4px 10px;font-size:.8rem;margin:0" onclick="removeTopic('${t.name}')">✕</button>
+    </div>
+  `).join('');
+}
+async function addTopic() {
+  const name = document.getElementById('newTopicName').value.trim();
+  if (!name) return;
+  const kw = document.getElementById('newTopicKeywords').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const max = parseInt(document.getElementById('newTopicMax').value) || 8;
+  await postJSON('/admin/crawler/add-topic', {name, keywords:kw, max_articles:max});
+  document.getElementById('newTopicName').value = '';
+  document.getElementById('newTopicKeywords').value = '';
+  loadTopics();
+}
+async function removeTopic(name) {
+  if (!confirm(`Remove topic "${name}"?`)) return;
+  await postJSON('/admin/crawler/remove-topic', {name});
+  loadTopics();
+}
+async function toggleTopic(name) {
+  await postJSON('/admin/crawler/toggle-topic', {name});
+  loadTopics();
+}
+async function runOneTopic(topic) {
+  const el = document.getElementById('crawler-status');
+  el.innerHTML = spinnerHTML(`Crawling "${topic}"… this may take 30-60 seconds.`);
+  const d = await postJSON('/admin/crawler/run-topic', {topic});
+  if (d.status === 'success') {
+    el.innerHTML = resultBox('success', `✅ Crawled "${topic}": ${d.entries} new entries\n\nSamples:\n${(d.samples||[]).map(s=>`Q: ${s.question}\nA: ${s.answer?.substring(0,150)}…`).join('\n\n')}`);
+    refreshStats();
+  } else {
+    el.innerHTML = resultBox('warning', `⚠️ ${d.status}`);
+  }
+}
+async function runAllCrawlers() {
+  const el = document.getElementById('crawler-status');
+  el.innerHTML = spinnerHTML('Running all crawlers… this may take several minutes.');
+  const d = await postJSON('/admin/crawler/run', {});
+  let lines = [`Total new entries: ${d.total_new_entries}\n`];
+  for (const [name, info] of Object.entries(d.topics || {})) {
+    lines.push(`${name}: ${info.status} (${info.entries} entries)`);
+  }
+  el.innerHTML = resultBox(d.total_new_entries > 0 ? 'success' : 'warning', lines.join('\n'));
+  refreshStats();
+}
+
+/* ── Learning ── */
+async function submitLearn() {
+  const prompt = document.getElementById('learnPrompt').value.trim();
+  if (!prompt) return;
+  const kw = document.getElementById('learnKeywords').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const el = document.getElementById('learn-status');
+  el.innerHTML = spinnerHTML(`Learning about "${prompt}"… crawling Wikipedia.`);
+  const d = await postJSON('/admin/learn', {prompt, keywords:kw});
+  if (d.status === 'success') {
+    el.innerHTML = resultBox('success', `✅ ${d.message}\n\nEntries: ${d.entries}\n\nSamples:\n${(d.samples||[]).map(s=>`Q: ${s.question}\nA: ${s.answer?.substring(0,150)}…`).join('\n\n')}`);
+    refreshStats();
+  } else {
+    el.innerHTML = resultBox('error', `❌ ${d.error || d.status}`);
+  }
+}
+async function submitLearnAndTrain() {
+  await submitLearn();
+  await retrain();
+}
+function quickLearn(topic) {
+  document.getElementById('learnPrompt').value = `Learn about ${topic}`;
+  submitLearn();
+}
+
+/* ── Knowledge Browser ── */
+async function loadKnowledge() {
+  const domain = document.getElementById('kbDomain').value;
+  const d = await api(`/admin/knowledge?domain=${encodeURIComponent(domain)}`);
+  const tbody = document.getElementById('kbBody');
+  tbody.innerHTML = d.entries.map(e => `
+    <tr>
+      <td>${esc(e.question)}</td>
+      <td>${esc(e.answer)}</td>
+      <td><span class="domain-tag">${e.domain}</span></td>
+      <td style="color:#8b949e;font-size:.8rem">${e.source}</td>
+    </tr>
+  `).join('');
+  document.getElementById('kbCount').textContent = `${d.total} entries`;
+}
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+/* ── Init ── */
+loadTopics();
+</script>
+</body>
+</html>

@@ -14,16 +14,20 @@ Then open http://localhost:5000 in your browser.
 from __future__ import annotations
 
 import json
+import secrets
 from pathlib import Path
 
 import numpy as np
 from flask import Flask, render_template, request, jsonify
 
+from admin import admin_bp
 from knowledge_base import KNOWLEDGE, get_domains
 from neural_network import NeuralNetwork
 from vectorizer import BagOfWords
 
 app = Flask(__name__)
+app.secret_key = secrets.token_hex(32)
+app.register_blueprint(admin_bp)
 
 # ── Logic-gate datasets ──────────────────────────────────────────────
 INPUTS = np.array([[0, 0], [0, 1], [1, 0], [1, 1]], dtype=np.float64)

@@ -85,8 +85,17 @@ def train(
 ) -> tuple[NeuralNetwork, BagOfWords, dict[int, str]]:
     """Train the knowledge classifier.  Returns (model, vectorizer, answer_map)."""
 
-    # Prepare data
-    data = augment_questions(KNOWLEDGE) if augment else list(KNOWLEDGE)
+    # Prepare data — built-in + extra knowledge from crawler / uploads
+    base = list(KNOWLEDGE)
+    extra_dir = Path("data/extra_knowledge")
+    if extra_dir.exists():
+        from knowledge_base import load_extra_knowledge
+        for fp in sorted(extra_dir.glob("*.json")):
+            try:
+                base.extend(load_extra_knowledge(fp))
+            except Exception:
+                pass
+    data = augment_questions(base) if augment else base
     questions = [q for q, _, _ in data]
     answers_source = [a for _, a, _ in data]
     n_samples = len(questions)

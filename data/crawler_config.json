@@ -1,0 +1,30 @@
+{
+  "topics": [
+    {
+      "name": "Wi-Fi Security",
+      "keywords": ["WPA3", "802.1X authentication", "wireless security"],
+      "enabled": true,
+      "max_articles": 8
+    },
+    {
+      "name": "Network Protocols",
+      "keywords": ["TCP/IP protocol", "routing protocol", "network protocol"],
+      "enabled": true,
+      "max_articles": 8
+    },
+    {
+      "name": "Corporate Network Security",
+      "keywords": ["enterprise security", "zero trust architecture", "NAC"],
+      "enabled": true,
+      "max_articles": 8
+    },
+    {
+      "name": "Network Troubleshooting",
+      "keywords": ["Wi-Fi troubleshooting", "network diagnostics"],
+      "enabled": true,
+      "max_articles": 5
+    }
+  ],
+  "last_crawl": null,
+  "crawl_interval_hours": 2
+}
