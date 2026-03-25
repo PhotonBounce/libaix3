@@ -2,19 +2,30 @@
 """
 app.py — Flask web UI for the libaix neural network.
 
+Provides:
+  • Logic-gate playground (predict, train)
+  • AI chat (knowledge Q&A powered by a trained classifier)
+
 Run:
     python app.py
 Then open http://localhost:5000 in your browser.
 """
 
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
 import numpy as np
 from flask import Flask, render_template, request, jsonify
 
+from knowledge_base import KNOWLEDGE, get_domains
 from neural_network import NeuralNetwork
+from vectorizer import BagOfWords
 
 app = Flask(__name__)
 
-# ── Datasets ──────────────────────────────────────────────────────────
+# ── Logic-gate datasets ──────────────────────────────────────────────
 INPUTS = np.array([[0, 0], [0, 1], [1, 0], [1, 1]], dtype=np.float64)
 TARGETS = {
     "xor":  np.array([[0], [1], [1], [0]], dtype=np.float64),
@@ -27,6 +38,14 @@ TARGETS = {
 models: dict[str, NeuralNetwork] = {}
 loss_history: dict[str, list[float]] = {}
 
+# Knowledge AI state
+knowledge_model: NeuralNetwork | None = None
+knowledge_bow: BagOfWords | None = None
+knowledge_answer_map: dict[int, str] = {}
+knowledge_domains: list[str] = []
+
+MODEL_DIR = Path("models")
+
 
 def _train(dataset: str, activation: str = "sigmoid", optimizer: str = "sgd",
            lr: float = 1.0, epochs: int = 10_000) -> list[float]:
@@ -38,16 +57,43 @@ def _train(dataset: str, activation: str = "sigmoid", optimizer: str = "sgd",
     return losses
 
 
-# Train XOR on startup so the UI works immediately
+def _load_knowledge_model() -> bool:
+    """Load the pre-trained knowledge model, vectorizer, and answer map."""
+    global knowledge_model, knowledge_bow, knowledge_answer_map, knowledge_domains
+    model_path = MODEL_DIR / "knowledge.npz"
+    vec_path = MODEL_DIR / "vectorizer.json"
+    ans_path = MODEL_DIR / "answer_map.json"
+    if not all(p.exists() for p in (model_path, vec_path, ans_path)):
+        return False
+    knowledge_model = NeuralNetwork.load(model_path)
+    knowledge_bow = BagOfWords.load(vec_path)
+    raw = json.loads(ans_path.read_text(encoding="utf-8"))
+    knowledge_answer_map = {int(k): v for k, v in raw.items()}
+    knowledge_domains = get_domains()
+    return True
+
+
+# Startup
 print("Training XOR neural network …")
 _train("xor")
-print("Training complete!\n")
+print("Training complete!")
 
+if _load_knowledge_model():
+    print(f"Knowledge AI loaded — {len(knowledge_answer_map)} answers, "
+          f"domains: {', '.join(knowledge_domains)}")
+else:
+    print("Warning: Knowledge model not found. Run 'python train_knowledge.py' first.")
+print()
+
+
+# ── Routes: pages ─────────────────────────────────────────────────────
 
 @app.route("/")
 def index():
     return render_template("index.html")
 
+
+# ── Routes: logic-gate API ────────────────────────────────────────────
 
 @app.route("/predict", methods=["POST"])
 def predict():
@@ -76,7 +122,6 @@ def train_endpoint():
     if dataset not in TARGETS:
         return jsonify({"error": "unknown dataset"}), 400
     losses = _train(dataset, activation, optimizer, lr, epochs)
-    # Downsample loss curve for the chart (max 200 points)
     step = max(1, len(losses) // 200)
     sampled = losses[::step]
     preds = models[dataset].predict(INPUTS).tolist()
@@ -96,6 +141,96 @@ def train_endpoint():
 @app.route("/datasets", methods=["GET"])
 def datasets():
     return jsonify(list(TARGETS.keys()))
+
+
+# ── Routes: Knowledge AI chat ────────────────────────────────────────
+
+@app.route("/chat", methods=["POST"])
+def chat():
+    """Answer a user question using the knowledge classifier."""
+    if knowledge_model is None or knowledge_bow is None:
+        return jsonify({"error": "Knowledge model not loaded. Train it first."}), 503
+
+    data = request.get_json(force=True)
+    question = str(data.get("question", "")).strip()
+    if not question:
+        return jsonify({"error": "Empty question"}), 400
+
+    # Vectorize user query
+    vec = knowledge_bow.transform([question])
+
+    # Predict
+    probs = knowledge_model.predict(vec)[0]
+    top_idx = int(np.argmax(probs))
+    confidence = float(probs[top_idx])
+
+    answer = knowledge_answer_map.get(top_idx, "I don't have an answer for that.")
+
+    # Find the domain for context
+    # Match back to original KNOWLEDGE entry via the answer
+    domain = "general"
+    for _, a, d in KNOWLEDGE:
+        if a == answer:
+            domain = d
+            break
+
+    # Get top-3 for multi-result
+    top3_idx = np.argsort(probs)[::-1][:3]
+    suggestions = []
+    for idx in top3_idx:
+        idx = int(idx)
+        a = knowledge_answer_map.get(idx, "")
+        if a:
+            suggestions.append({
+                "answer": a,
+                "confidence": round(float(probs[idx]), 4),
+            })
+
+    # Low confidence threshold
+    if confidence < 0.15:
+        answer = ("I'm not sure about that. Try asking about networking, internet, "
+                  "intranet, or security topics. Type 'help' for examples.")
+        domain = "general"
+
+    return jsonify({
+        "answer": answer,
+        "confidence": round(confidence, 4),
+        "domain": domain,
+        "suggestions": suggestions,
+    })
+
+
+@app.route("/knowledge/domains", methods=["GET"])
+def knowledge_domain_list():
+    return jsonify(knowledge_domains)
+
+
+@app.route("/knowledge/stats", methods=["GET"])
+def knowledge_stats():
+    return jsonify({
+        "loaded": knowledge_model is not None,
+        "total_answers": len(knowledge_answer_map),
+        "domains": knowledge_domains,
+        "vocab_size": knowledge_bow.vocab_size if knowledge_bow else 0,
+    })
+
+
+@app.route("/knowledge/retrain", methods=["POST"])
+def retrain_knowledge():
+    """Re-train the knowledge model (useful after adding new knowledge)."""
+    try:
+        from train_knowledge import train as train_knowledge
+        train_knowledge(verbose=False)
+        ok = _load_knowledge_model()
+        if not ok:
+            return jsonify({"error": "Training succeeded but model loading failed"}), 500
+        return jsonify({
+            "success": True,
+            "total_answers": len(knowledge_answer_map),
+            "domains": knowledge_domains,
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":

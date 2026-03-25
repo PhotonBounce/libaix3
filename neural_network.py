@@ -4,10 +4,11 @@ neural_network.py — A neural network built from scratch using only NumPy.
 Implements:
   • Configurable multi-layer feed-forward network
   • Multiple activations: sigmoid, tanh, relu
+  • Softmax output layer for multi-class classification
+  • Cross-entropy and MSE loss functions
   • Xavier/Glorot weight initialisation (He for ReLU)
   • Optimizers: SGD, Momentum, Adam
   • Model save / load (NumPy .npz)
-  • Stochastic-gradient-descent back-propagation
 """
 
 from __future__ import annotations
@@ -47,12 +48,23 @@ def _relu_deriv(a: np.ndarray, z: np.ndarray) -> np.ndarray:  # noqa: ARG001
     return (z > 0).astype(z.dtype)
 
 
-_ACT_FN = {"sigmoid": (_sigmoid, _sigmoid_deriv), "tanh": (_tanh, _tanh_deriv), "relu": (_relu, _relu_deriv)}
+def _softmax(z: np.ndarray) -> np.ndarray:
+    shifted = z - np.max(z, axis=1, keepdims=True)
+    exp_z = np.exp(shifted)
+    return exp_z / np.sum(exp_z, axis=1, keepdims=True)
+
+
+_ACT_FN = {
+    "sigmoid": (_sigmoid, _sigmoid_deriv),
+    "tanh": (_tanh, _tanh_deriv),
+    "relu": (_relu, _relu_deriv),
+}
 
 # ======================================================================
 # Optimizer helpers
 # ======================================================================
 OPTIMIZERS = ("sgd", "momentum", "adam")
+LOSS_FUNCTIONS = ("mse", "cross_entropy")
 
 
 class NeuralNetwork:
@@ -68,6 +80,10 @@ class NeuralNetwork:
         ``"sigmoid"`` (default), ``"tanh"``, or ``"relu"``.
     optimizer : str
         ``"sgd"`` (default), ``"momentum"``, or ``"adam"``.
+    loss : str
+        ``"mse"`` (default) or ``"cross_entropy"`` (for classification).
+    softmax_output : bool
+        Apply softmax on the output layer (default ``False``).
     seed : int | None
         Random seed for reproducibility.
     """
@@ -78,6 +94,8 @@ class NeuralNetwork:
         learning_rate: float = 0.5,
         activation: str = "sigmoid",
         optimizer: str = "sgd",
+        loss: str = "mse",
+        softmax_output: bool = False,
         seed: int | None = None,
     ) -> None:
         if len(layer_sizes) < 2:
@@ -86,11 +104,15 @@ class NeuralNetwork:
             raise ValueError(f"activation must be one of {ACTIVATIONS}, got {activation!r}")
         if optimizer not in OPTIMIZERS:
             raise ValueError(f"optimizer must be one of {OPTIMIZERS}, got {optimizer!r}")
+        if loss not in LOSS_FUNCTIONS:
+            raise ValueError(f"loss must be one of {LOSS_FUNCTIONS}, got {loss!r}")
 
         self.layer_sizes = layer_sizes
         self.learning_rate = learning_rate
         self.activation = activation
         self.optimizer = optimizer
+        self.loss_fn = loss
+        self.softmax_output = softmax_output
         self._act_fn, self._act_deriv = _ACT_FN[activation]
         self._rng = np.random.default_rng(seed)
 
@@ -126,10 +148,14 @@ class NeuralNetwork:
         self._activations: list[np.ndarray] = [x]
         self._zs: list[np.ndarray] = []
         a = x
-        for w, b in zip(self.weights, self.biases):
+        for idx, (w, b) in enumerate(zip(self.weights, self.biases)):
             z = a @ w + b
-            a = self._act_fn(z)
             self._zs.append(z)
+            # Apply softmax only on the last layer if enabled
+            if self.softmax_output and idx == len(self.weights) - 1:
+                a = _softmax(z)
+            else:
+                a = self._act_fn(z)
             self._activations.append(a)
         return a
 
@@ -137,24 +163,45 @@ class NeuralNetwork:
     # Backward pass
     # ------------------------------------------------------------------
     def backward(self, y: np.ndarray) -> float:
-        """Back-propagate error and update weights. Returns MSE loss."""
+        """Back-propagate error and update weights. Returns loss."""
         output = self._activations[-1]
-        error = y - output
-        loss = float(np.mean(error ** 2))
         n_layers = len(self.weights)
         batch = y.shape[0]
 
-        deltas: list[np.ndarray] = [None] * n_layers  # type: ignore[list-item]
-        deltas[-1] = error * self._act_deriv(output, self._zs[-1])
+        # Compute loss and output-layer delta
+        if self.loss_fn == "cross_entropy":
+            eps = 1e-12
+            clipped = np.clip(output, eps, 1.0 - eps)
+            loss = float(-np.mean(np.sum(y * np.log(clipped), axis=1)))
+            # For softmax + cross-entropy, the gradient simplifies
+            if self.softmax_output:
+                deltas: list[np.ndarray] = [None] * n_layers  # type: ignore[list-item]
+                deltas[-1] = output - y
+            else:
+                deltas = [None] * n_layers  # type: ignore[list-item]
+                deltas[-1] = (output - y) * self._act_deriv(output, self._zs[-1])
+        else:
+            error = y - output
+            loss = float(np.mean(error ** 2))
+            deltas = [None] * n_layers  # type: ignore[list-item]
+            if self.softmax_output:
+                deltas[-1] = output - y
+            else:
+                deltas[-1] = error * self._act_deriv(output, self._zs[-1])
+            # MSE gradient sign: for MSE we want -(error)*deriv but our update adds,
+            # so for non-softmax MSE keep the old sign convention (error * deriv)
+            if not self.softmax_output:
+                deltas[-1] = error * self._act_deriv(output, self._zs[-1])
 
         for i in range(n_layers - 2, -1, -1):
             err_h = deltas[i + 1] @ self.weights[i + 1].T
             deltas[i] = err_h * self._act_deriv(self._activations[i + 1], self._zs[i])
 
         self._step += 1
+        sign = -1.0 if (self.loss_fn == "cross_entropy" or self.softmax_output) else 1.0
         for i in range(n_layers):
-            gw = self._activations[i].T @ deltas[i] / batch
-            gb = np.sum(deltas[i], axis=0, keepdims=True) / batch
+            gw = sign * (self._activations[i].T @ deltas[i]) / batch
+            gb = sign * np.sum(deltas[i], axis=0, keepdims=True) / batch
             self._apply_update(i, gw, gb)
 
         return loss
@@ -206,9 +253,12 @@ class NeuralNetwork:
     def predict(self, x: np.ndarray) -> np.ndarray:
         """Inference-only forward pass (no gradient storage)."""
         a = x
-        for w, b in zip(self.weights, self.biases):
+        for idx, (w, b) in enumerate(zip(self.weights, self.biases)):
             z = a @ w + b
-            a = self._act_fn(z)
+            if self.softmax_output and idx == len(self.weights) - 1:
+                a = _softmax(z)
+            else:
+                a = self._act_fn(z)
         return a
 
     # ------------------------------------------------------------------
@@ -226,6 +276,8 @@ class NeuralNetwork:
             "learning_rate": self.learning_rate,
             "activation": self.activation,
             "optimizer": self.optimizer,
+            "loss_fn": self.loss_fn,
+            "softmax_output": self.softmax_output,
         }
         arrays["_meta"] = np.array(json.dumps(meta))
         np.savez(path, **arrays)
@@ -240,6 +292,8 @@ class NeuralNetwork:
         nn.learning_rate = meta["learning_rate"]
         nn.activation = meta["activation"]
         nn.optimizer = meta["optimizer"]
+        nn.loss_fn = meta.get("loss_fn", "mse")
+        nn.softmax_output = meta.get("softmax_output", False)
         nn._act_fn, nn._act_deriv = _ACT_FN[nn.activation]
         nn._rng = np.random.default_rng()
         nn.weights = [data[f"w{i}"] for i in range(len(nn.layer_sizes) - 1)]

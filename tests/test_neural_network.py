@@ -28,6 +28,10 @@ class TestNeuralNetworkInit:
         with pytest.raises(ValueError, match="optimizer"):
             NeuralNetwork([2, 3, 1], optimizer="rmsprop")
 
+    def test_invalid_loss(self):
+        with pytest.raises(ValueError, match="loss"):
+            NeuralNetwork([2, 3, 1], loss="huber")
+
     def test_weight_shapes(self):
         nn = NeuralNetwork([3, 4, 2])
         assert nn.weights[0].shape == (3, 4)
@@ -149,3 +153,78 @@ class TestSaveLoad:
         assert loaded.activation == "tanh"
         assert loaded.optimizer == "adam"
         assert loaded.layer_sizes == [2, 4, 1]
+
+    def test_round_trip_softmax_cross_entropy(self):
+        """Save/load preserves softmax_output and loss_fn settings."""
+        nn = NeuralNetwork([4, 8, 3], learning_rate=0.01, activation="tanh",
+                           optimizer="adam", loss="cross_entropy",
+                           softmax_output=True, seed=42)
+        x = np.random.default_rng(0).random((4, 4))
+        y = np.eye(3, dtype=np.float64)[:3]  # 3 samples, pad
+        y = np.vstack([y, np.eye(3, dtype=np.float64)[:1]])  # 4 samples
+        nn.train(x, y, epochs=100, log_every=0)
+        preds_before = nn.predict(x)
+
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "model.npz"
+            nn.save(path)
+            loaded = NeuralNetwork.load(path)
+
+        assert loaded.loss_fn == "cross_entropy"
+        assert loaded.softmax_output is True
+        preds_after = loaded.predict(x)
+        np.testing.assert_array_almost_equal(preds_before, preds_after)
+
+
+class TestSoftmaxCrossEntropy:
+    """Tests for softmax output and cross-entropy loss."""
+
+    def test_softmax_output_sums_to_one(self):
+        nn = NeuralNetwork([4, 8, 3], softmax_output=True, seed=0)
+        x = np.array([[1.0, 2.0, 3.0, 4.0]])
+        out = nn.forward(x)
+        np.testing.assert_almost_equal(np.sum(out, axis=1), [1.0])
+        assert np.all(out >= 0)
+
+    def test_cross_entropy_loss_decreases(self):
+        nn = NeuralNetwork([4, 8, 3], learning_rate=0.05, activation="tanh",
+                           optimizer="adam", loss="cross_entropy",
+                           softmax_output=True, seed=42)
+        rng = np.random.default_rng(0)
+        x = rng.random((6, 4))
+        # One-hot labels for 3 classes
+        y = np.zeros((6, 3), dtype=np.float64)
+        for i in range(6):
+            y[i, i % 3] = 1.0
+
+        nn.forward(x)
+        first_loss = nn.backward(y)
+        for _ in range(300):
+            nn.forward(x)
+            nn.backward(y)
+        nn.forward(x)
+        last_loss = nn.backward(y)
+        assert last_loss < first_loss
+
+    def test_multiclass_convergence(self):
+        """Train a 3-class classifier and verify correct predictions."""
+        nn = NeuralNetwork([4, 16, 3], learning_rate=0.01, activation="tanh",
+                           optimizer="adam", loss="cross_entropy",
+                           softmax_output=True, seed=42)
+        # Simple clustering: each class in a different quadrant
+        x = np.array([
+            [1, 0, 0, 0], [0.9, 0.1, 0, 0],   # class 0
+            [0, 1, 0, 0], [0.1, 0.9, 0, 0],   # class 1
+            [0, 0, 1, 0], [0, 0.1, 0.9, 0],   # class 2
+        ], dtype=np.float64)
+        y = np.array([
+            [1, 0, 0], [1, 0, 0],
+            [0, 1, 0], [0, 1, 0],
+            [0, 0, 1], [0, 0, 1],
+        ], dtype=np.float64)
+
+        nn.train(x, y, epochs=2000, log_every=0)
+        preds = nn.predict(x)
+        pred_classes = np.argmax(preds, axis=1)
+        true_classes = np.argmax(y, axis=1)
+        np.testing.assert_array_equal(pred_classes, true_classes)
