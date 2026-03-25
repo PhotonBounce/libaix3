@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>libaix — XOR Neural Network</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 0.3rem;
+      background: linear-gradient(135deg, #58a6ff, #bc8cff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .subtitle {
+      color: #8b949e;
+      font-size: 0.95rem;
+      margin-bottom: 2rem;
+    }
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 440px;
+    }
+    .input-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.2rem;
+      margin-bottom: 1.5rem;
+    }
+    .toggle-group { text-align: center; }
+    .toggle-group label {
+      display: block;
+      font-size: 0.8rem;
+      color: #8b949e;
+      margin-bottom: 0.4rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .toggle-btn {
+      width: 72px;
+      height: 72px;
+      border-radius: 12px;
+      border: 2px solid #30363d;
+      background: #0d1117;
+      color: #e6edf3;
+      font-size: 1.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .toggle-btn:hover { border-color: #58a6ff; }
+    .toggle-btn.active {
+      background: #1f6feb;
+      border-color: #58a6ff;
+      color: #fff;
+    }
+    .xor-symbol {
+      font-size: 1.6rem;
+      color: #8b949e;
+      margin-top: 1.2rem;
+      font-weight: 600;
+    }
+    .predict-btn {
+      display: block;
+      width: 100%;
+      padding: 0.85rem;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #238636, #2ea043);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .predict-btn:hover { opacity: 0.9; }
+    .predict-btn:disabled { opacity: 0.5; cursor: wait; }
+    .result-box {
+      margin-top: 1.5rem;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 1.2rem;
+      text-align: center;
+      display: none;
+    }
+    .result-box.show { display: block; }
+    .result-value {
+      font-size: 3rem;
+      font-weight: 800;
+      margin: 0.3rem 0;
+    }
+    .result-value.zero { color: #f85149; }
+    .result-value.one  { color: #3fb950; }
+    .result-detail {
+      font-size: 0.85rem;
+      color: #8b949e;
+    }
+    .truth-table {
+      margin-top: 2rem;
+      width: 100%;
+      max-width: 440px;
+    }
+    .truth-table h3 {
+      font-size: 0.85rem;
+      color: #8b949e;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.6rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    th, td {
+      padding: 0.5rem 0.8rem;
+      text-align: center;
+      border-bottom: 1px solid #21262d;
+    }
+    th { color: #8b949e; font-weight: 600; }
+    td.correct { color: #3fb950; }
+    td.wrong   { color: #f85149; }
+    .footer {
+      margin-top: 2rem;
+      font-size: 0.75rem;
+      color: #484f58;
+    }
+    .footer a { color: #58a6ff; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <h1>libaix</h1>
+  <p class="subtitle">XOR Neural Network — no ML libraries, just NumPy</p>
+
+  <div class="card">
+    <div class="input-row">
+      <div class="toggle-group">
+        <label>Input A</label>
+        <button class="toggle-btn" id="btnA" onclick="toggle('A')">0</button>
+      </div>
+      <span class="xor-symbol">⊕</span>
+      <div class="toggle-group">
+        <label>Input B</label>
+        <button class="toggle-btn" id="btnB" onclick="toggle('B')">0</button>
+      </div>
+    </div>
+    <button class="predict-btn" id="predictBtn" onclick="predict()">Predict</button>
+
+    <div class="result-box" id="resultBox">
+      <div class="result-detail">Neural network says</div>
+      <div class="result-value" id="resultValue">—</div>
+      <div class="result-detail" id="resultRaw"></div>
+    </div>
+  </div>
+
+  <div class="truth-table" id="truthTable">
+    <h3>Full truth table (live predictions)</h3>
+    <table>
+      <thead><tr><th>A</th><th>B</th><th>Expected</th><th>Predicted</th></tr></thead>
+      <tbody id="ttBody"></tbody>
+    </table>
+  </div>
+
+  <p class="footer">Powered by <a href="https://github.com/lindapot-art/libaix" target="_blank">libaix</a> — 2-4-1 network, 10 000 epochs</p>
+
+  <script>
+    const vals = { A: 0, B: 0 };
+
+    function toggle(which) {
+      vals[which] ^= 1;
+      const btn = document.getElementById('btn' + which);
+      btn.textContent = vals[which];
+      btn.classList.toggle('active', vals[which] === 1);
+    }
+
+    async function predict() {
+      const btn = document.getElementById('predictBtn');
+      btn.disabled = true;
+      btn.textContent = 'Thinking…';
+      try {
+        const res = await fetch('/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ a: vals.A, b: vals.B })
+        });
+        const data = await res.json();
+        const box = document.getElementById('resultBox');
+        const val = document.getElementById('resultValue');
+        const raw = document.getElementById('resultRaw');
+        box.classList.add('show');
+        val.textContent = data.result;
+        val.className = 'result-value ' + (data.result === 0 ? 'zero' : 'one');
+        raw.textContent = `Raw output: ${data.raw}`;
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+      btn.disabled = false;
+      btn.textContent = 'Predict';
+    }
+
+    // Load full truth table on page load
+    async function loadTruthTable() {
+      const pairs = [[0,0],[0,1],[1,0],[1,1]];
+      const expected = [0, 1, 1, 0];
+      const tbody = document.getElementById('ttBody');
+      tbody.innerHTML = '';
+      for (let i = 0; i < pairs.length; i++) {
+        const res = await fetch('/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ a: pairs[i][0], b: pairs[i][1] })
+        });
+        const data = await res.json();
+        const ok = data.result === expected[i];
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${pairs[i][0]}</td>
+          <td>${pairs[i][1]}</td>
+          <td>${expected[i]}</td>
+          <td class="${ok ? 'correct' : 'wrong'}">${data.result} <small>(${data.raw})</small></td>
+        `;
+        tbody.appendChild(tr);
+      }
+    }
+    loadTruthTable();
+  </script>
+</body>
+</html>
