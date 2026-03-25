@@ -230,7 +230,6 @@ Type <code>help</code> for full command list, or just tell me what you need!</di
   </div>
 </div>
 
-<!-- ══════════════ 
 <!-- ══════════════ UPLOAD & EXTRACT ══════════════ -->
 <div class="section" id="sec-upload">
   <h2>Upload Files &amp; Paste Text</h2>
@@ -267,17 +266,15 @@ Type <code>help</code> for full command list, or just tell me what you need!</di
   <textarea id="manualA" style="min-height:80px" placeholder="WPA3-Enterprise provides 192-bit minimum security..."></textarea>
   <label for="manualD">Domain</label>
   <input type="text" id="manualD" placeholder="Auto-detected if blank">
-  <button class="btn btn-primary" o, Reddit, HN &amp; DEV.to</h2>
-  <p style="margin-bottom:16px;color:#8b949e">
-    Crawl free public sources: StackExchange (ServerFault, NetworkEngineering, Security), Reddit (r/networking, r/netsec, r/sysadmin, r/cybersecurity), Hacker News, and DEV.to tech articles
+  <button class="btn btn-primary" onclick="submitManual()">✅ Add Q&amp;A Entry</button>
+  <div id="manual-status"></div>
+</div>
 
 <!-- ══════════════ CRAWLER (Wikipedia) ══════════════ -->
 <div class="section" id="sec-crawler">
   <h2>Wikipedia Crawler Management</h2>
   <p style="margin-bottom:16px;color:#8b949e">Configure topics for the Wikipedia knowledge crawler. Runs every 15 min via GitHub Actions or manually from here.</p>
-  <label style="margin-left:12px"><input type="checkbox" id="srcHN" checked> Hacker News</label>
-    <label style="margin-left:12px"><input type="checkbox" id="srcDevto" checked> DEV.to</label>
-  
+
   <div id="topic-list"></div>
 
   <h3 style="margin:20px 0 12px;font-size:1rem">Add New Crawler Topic</h3>
@@ -296,9 +293,9 @@ Type <code>help</code> for full command list, or just tell me what you need!</di
 
 <!-- ══════════════ FORUM CRAWLER ══════════════ -->
 <div class="section" id="sec-forum">
-  <h2>Forum Crawler — StackExchange &amp; Reddit</h2>
+  <h2>Forum Crawler — StackExchange, Reddit, HN &amp; DEV.to</h2>
   <p style="margin-bottom:16px;color:#8b949e">
-    Crawl free public forums (ServerFault, NetworkEngineering, Security StackExchange, Reddit r/networking, r/netsec, r/sysadmin) for real-world Q&amp;A knowledge.
+    Crawl free public sources: StackExchange (ServerFault, NetworkEngineering, Security), Reddit (r/networking, r/netsec, r/sysadmin, r/cybersecurity), Hacker News, and DEV.to tech articles.
   </p>
 
   <div id="forum-topic-list"></div>
@@ -316,6 +313,8 @@ Type <code>help</code> for full command list, or just tell me what you need!</di
   <div style="margin-bottom:12px">
     <label><input type="checkbox" id="srcSE" checked> StackExchange</label>
     <label style="margin-left:12px"><input type="checkbox" id="srcReddit" checked> Reddit</label>
+    <label style="margin-left:12px"><input type="checkbox" id="srcHN" checked> Hacker News</label>
+    <label style="margin-left:12px"><input type="checkbox" id="srcDevto" checked> DEV.to</label>
   </div>
   <button class="btn btn-primary" onclick="addForumTopic()">➕ Add Forum Topic</button>
 
@@ -325,7 +324,7 @@ Type <code>help</code> for full command list, or just tell me what you need!</di
 </div>
 
 <!-- ══════════════ SITE/URL CRAWLER ══════════════ -->
-<div class="section" id="sec-sitecrawl"><strong>all sources</strong> (Wikipedia + Reddit + StackExchange + Hacker News + DEV.to)
+<div class="section" id="sec-sitecrawl">
   <h2>URL Crawler — Crawl Any Website</h2>
   <p style="margin-bottom:16px;color:#8b949e">
     Enter any URL. The crawler will follow internal links, extract topic-relevant knowledge, discard original data, and flush caches. Only extracted Q&amp;A entries are kept.
@@ -423,7 +422,36 @@ Crawl for network segmentation best practices"></textarea>
     </div>
   </div>
 
-  <!-- Action buttonCRON CONTROLS ══════════════ -->
+  <!-- Action buttons -->
+  <div style="margin-bottom:16px">
+    <button class="btn btn-blue" onclick="mlAssess()">📊 Assess Model</button>
+    <button class="btn btn-primary" onclick="mlOptimize()">⚡ Optimize Model</button>
+    <button class="btn btn-orange" onclick="mlStabilize()">🛡️ Stabilize</button>
+    <button class="btn btn-blue" onclick="mlGrowthCheck()">📈 Growth Check</button>
+    <button class="btn btn-primary" onclick="mlGrowthCycle()">🔄 Full Growth Cycle</button>
+  </div>
+  <div id="ml-status"></div>
+
+  <hr style="border-color:#30363d;margin:24px 0">
+
+  <!-- Assessment Results -->
+  <h3 style="font-size:1rem;margin-bottom:12px">Model Assessment</h3>
+  <div id="ml-assessment"></div>
+
+  <hr style="border-color:#30363d;margin:24px 0">
+
+  <!-- History / Trend -->
+  <h3 style="font-size:1rem;margin-bottom:12px">Accuracy Trend</h3>
+  <div id="ml-trend" style="font-family:monospace;font-size:.85rem"></div>
+
+  <hr style="border-color:#30363d;margin:24px 0">
+
+  <!-- Recent Events -->
+  <h3 style="font-size:1rem;margin-bottom:12px">Recent Events</h3>
+  <div id="ml-events"></div>
+</div>
+
+<!-- ══════════════ CRON CONTROLS ══════════════ -->
 <div class="section" id="sec-cron">
   <h2>⏱️ Cron Job Controls &amp; Redline Warnings</h2>
   <p style="margin-bottom:16px;color:#8b949e">
@@ -460,39 +488,6 @@ Crawl for network segmentation best practices"></textarea>
   <div id="act-feed" style="max-height:400px;overflow-y:auto"></div>
 
   <button class="btn btn-blue" onclick="loadActivity()" style="margin-top:12px">🔄 Refresh</button>
-</div>
-
-<!-- ══════════════ s -->
-  <div style="margin-bottom:16px">
-    <button class="btn btn-blue" onclick="mlAssess()">📊 Assess Model</button>
-    <button class="btn btn-primary" onclick="mlOptimize()">⚡ Optimize Model</button>
-    <button class="btn btn-orange" onclick="mlStabilize()">🛡️ Stabilize</button>
-    <button class="btn btn-blue" onclick="mlGrowthCheck()">📈 Growth Check</button>
-    <button class="btn btn-primary" onclick="mlGrowthCycle()">🔄 Full Growth Cycle</button>
-  </div>
-  <div id="ml-status"></div>
-
-  <hr style="border-color:#30363d;margin:24px 0">
-
-  <!-- Assessment Results -->
-  <h3 style="font-size:1rem;margin-bottom:12px">Model Assessment</h3>
-  <div id="ml-assessment"></div>
-
-  <hr style="border-color:#30363d;margin:24px 0">
-
-  <!-- History / Trend -->
-  if (name === 'chatbot') document.getElementById('chat-input').focus();
-  <h3 style="font-size:1rem;margin-bottom:12px">Accuracy Trend</h3>
-  <div id="ml-trend" style="font-family:monospace;font-size:.85rem"></div>
-
-  <hr style="border-color:#30363d;margin:24px 0">
-  if (name === 'cron') loadCronConfig();
-  if (name === 'activity') loadActivity();
-  if (name === 'dashboard') loadDashboardGrowth();
-
-  <!-- Recent Events -->
-  <h3 style="font-size:1rem;margin-bottom:12px">Recent Events</h3>
-  <div id="ml-events"></div>
 </div>
 
 <!-- ══════════════ KNOWLEDGE BROWSER ══════════════ -->
@@ -540,6 +535,10 @@ function showSection(name) {
   if (name === 'sitecrawl') loadSiteStats();
   if (name === 'mlengine') loadMLEngine();
   if (name === 'learned') loadLearned();
+  if (name === 'chatbot') document.getElementById('chat-input').focus();
+  if (name === 'cron') loadCronConfig();
+  if (name === 'activity') loadActivity();
+  if (name === 'dashboard') loadDashboardGrowth();
 }
 
 function statusHTML(cls, msg) {
@@ -573,6 +572,9 @@ async function refreshStats() {
   if (d.learning) {
     const v = d.learning.learning_velocity || 0;
     document.getElementById('stat-velocity').textContent = v.toFixed(1) + ' /hr';
+  if (d.ml_engine) {
+    document.getElementById('stat-cycles').textContent = d.ml_engine.cycle_count || 0;
+  }
     document.getElementById('stat-24h').textContent = d.learning.entries_last_24h || 0;
   }
   // Source breakdown bar
@@ -604,12 +606,10 @@ function renderSourceBar(breakdown) {
   }).join('');
 
   legend.innerHTML = entries.map(([src, count]) => {
+    const pct = (count / total * 100).toFixed(1);
     const color = SOURCE_COLORS[src] || '#484f58';
-    return `<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${color};margin-right:4px;vertical-align:middle"></span>${src}: ${count}</span>`;
+    return `<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${color}"></span>${src}: ${count} (${pct}%)</span>`;
   }).join('');
-  if (d.ml_engine) {
-    document.getElementById('stat-cycles').textContent = d.ml_engine.cycle_count || 0;
-  }
 }
 async function retrain() {
   const el = document.getElementById('dashboard-status');
@@ -744,35 +744,8 @@ async function addTopic() {
   const max = parseInt(document.getElementById('newTopicMax').value) || 8;
   await postJSON('/admin/crawler/add-topic', {name, keywords:kw, max_articles:max});
   document.getElementById('newTopicName').value = '';
-  document.getElementById('newTopicKeywords').value = '';ALL sources (Wikipedia + Reddit + StackExchange + HN + DEV.to).`);
-  const d = await postJSON('/admin/learn', {prompt, keywords:kw});
-  if (d.status === 'success') {
-    let lines = [`✅ ${d.message}\n\nTotal entries: ${d.entries}`];
-    // Source breakdown
-    const sb = d.source_breakdown || {};
-    if (Object.keys(sb).length) {
-      lines.push('\nSource breakdown:');
-      for (const [src, count] of Object.entries(sb)) {
-        lines.push(`  ${src}: ${count} entries`);
-      }
-    }
-    // Show per-source results
-    if (d.sources) {
-      const wiki = d.sources.wikipedia || {};
-      const forum = d.sources.forums || {};
-      lines.push(`\nWikipedia: ${wiki.entries||0} entries (${wiki.status||'—'})`);
-      lines.push(`Forums: ${forum.entries||0} entries (${forum.status||'—'})`);
-    }
-    if (d.samples && d.samples.length) {
-      lines.push('\nSamples:');
-      for (const s of d.samples) {
-        lines.push(`Q: ${s.question}\nA: ${s.answer?.substring(0,150)}…`);
-      }
-    }
-    el.innerHTML = resultBox('success', lines.join('\n'));
-    refreshStats();
-  } else {
-    el.innerHTML = resultBox('error', `❌ ${d.error || d.message
+  document.getElementById('newTopicKeywords').value = '';
+  loadTopics();
 }
 async function toggleTopic(name) {
   await postJSON('/admin/crawler/toggle-topic', {name});
@@ -1000,16 +973,15 @@ async function loadMLEngine() {
 }
 async function saveMLConfig() {
   await postJSON('/admin/ml/config', {
-    auto_optimize: document.getElementById('mlAutoOptimize').checked,
-    auto_stabilize: document.getElementById('mlAutoStabilize').checked,
     auto_grow: document.getElementById('mlAutoGrow').checked,
     min_accuracy_threshold: parseFloat(document.getElementById('mlMinAccuracy').value) || 0.90,
     confidence_threshold: parseFloat(document.getElementById('mlConfThreshold').value) || 0.60,
     growth_targets: { target_accuracy: parseFloat(document.getElementById('mlTargetAccuracy').value) || 0.98 },
-  });Dashboard Growth Info ── */
-async functio
-refreshStats();
-loadDashboardGrowth();n loadDashboardGrowth() {
+  });
+}
+
+/* ── Dashboard Growth Info ── */
+async function loadDashboardGrowth() {
   const d = await api('/admin/api/stats');
   // Growth factors
   const gk = document.getElementById('growth-knowledge');
@@ -1035,9 +1007,7 @@ loadDashboardGrowth();n loadDashboardGrowth() {
   const sn = document.getElementById('stabilization-notes');
   const events = ml.recent_events || [];
   const stabEvents = events.filter(e => e.type && (e.type.includes('stabiliz') || e.type === 'growth_cycle' || e.type === 'assessment'));
-  if (stabEvents.length) {
-    sn.innerHTML = stabEvents.reverse().map(e => {
-      const ts = e.timestamp ? new Date(e.timestamp).toLocaleString() : '';
+  if (stabEveestamp ? new Date(e.timestamp).toLocaleString() : '';
       let msg = `[${e.type}] `;
       if (e.accuracy !== undefined) msg += `Accuracy: ${(e.accuracy*100).toFixed(1)}% `;
       if (e.action) msg += `Action: ${e.action} `;
@@ -1173,8 +1143,6 @@ setInterval(() => {
   if (document.getElementById('sec-activity').classList.contains('active')) loadActivity();
 }, 30000);
 
-/* ── 
-}
 async function mlAssess() {
   const el = document.getElementById('ml-status');
   el.innerHTML = spinnerHTML('Assessing model quality…');
@@ -1189,7 +1157,20 @@ async function mlAssess() {
   } else { el.innerHTML = statusHTML('err', `❌ ${d.message || d.status}`); }
 }
 async function mlOptimize() {
-  consAdmin Chatbot ── */
+  const el = document.getElementById('ml-status');
+  el.innerHTML = spinnerHTML('Optimizing model… trying multiple hyperparameter configs. This may take several minutes.');
+  const d = await postJSON('/admin/ml/optimize', {});
+  if (d.status === 'success') {
+    let lines = [`Best accuracy: ${(d.best_accuracy*100).toFixed(1)}%\nBest config: ${JSON.stringify(d.best_config)}\n`];
+    for (const r of d.results||[]) {
+      lines.push(`  ${JSON.stringify(r.config)}: ${r.status === 'ok'? (r.accuracy*100).toFixed(1)+'%' : r.status}`);
+    }
+    el.innerHTML = resultBox('success', `✅ Optimization complete!\n\n${lines.join('\n')}`);
+    refreshStats(); loadMLEngine();
+  } else { el.innerHTML = resultBox('error', `❌ ${d.error || d.status}`); }
+}
+
+/* ── Admin Chatbot ── */
 function chatAppendMsg(role, html) {
   const container = document.getElementById('chat-messages');
   const div = document.createElement('div');
@@ -1245,28 +1226,12 @@ async function sendChat() {
     const container = document.getElementById('chat-messages');
     container.removeChild(container.lastChild);
     chatAppendMsg('assistant', '<span style="color:#f85149">Error: ' + esc(e.message) + '</span>');
+  } finally {
+    document.getElementById('chat-input').disabled = false;
   }
-  input.disabled = false;
-  input.focus();
 }
+function chatQuick(msg) { document.getElementById('chat-input').value = msg; sendChat(); }
 
-function chatQuick(msg) {
-  document.getElementById('chat-input').value = msg;
-  sendChat();
-}
-
-/* ── t el = document.getElementById('ml-status');
-  el.innerHTML = spinnerHTML('Optimizing model… trying multiple hyperparameter configs. This may take several minutes.');
-  const d = await postJSON('/admin/ml/optimize', {});
-  if (d.status === 'success') {
-    let lines = [`Best accuracy: ${(d.best_accuracy*100).toFixed(1)}%\nBest config: ${JSON.stringify(d.best_config)}\n`];
-    for (const r of d.results||[]) {
-      lines.push(`  ${JSON.stringify(r.config)}: ${r.status === 'ok'? (r.accuracy*100).toFixed(1)+'%' : r.status}`);
-    }
-    el.innerHTML = resultBox('success', `✅ Optimization complete!\n\n${lines.join('\n')}`);
-    refreshStats(); loadMLEngine();
-  } else { el.innerHTML = resultBox('error', `❌ ${d.error || d.status}`); }
-}
 async function mlStabilize() {
   const el = document.getElementById('ml-status');
   el.innerHTML = spinnerHTML('Checking model stability…');
@@ -1371,8 +1336,5 @@ async function loadLearned() {
     summaryEl.innerHTML = statusHTML('err', 'Failed to load learned topics: ' + e.message);
   }
 }
-
-function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 </script>
-</body>
 </html>
