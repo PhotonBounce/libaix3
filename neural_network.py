@@ -172,6 +172,7 @@ class NeuralNetwork:
     def forward(self, x: np.ndarray) -> np.ndarray:
         """Compute the network output for input ``x``."""
         self._activations: list[np.ndarray] = [x]
+        self._pre_dropout: list[np.ndarray] = []  # activations before dropout
         self._zs: list[np.ndarray] = []
         self._masks: list[np.ndarray | None] = []
         a = x
@@ -183,6 +184,7 @@ class NeuralNetwork:
                 a = _softmax(z)
             else:
                 a = self._act_fn(z)
+            self._pre_dropout.append(a)
             # Dropout: apply to hidden layers only (not the output layer) during training
             if (
                 self._training
@@ -233,7 +235,15 @@ class NeuralNetwork:
 
         for i in range(n_layers - 2, -1, -1):
             err_h = deltas[i + 1] @ self.weights[i + 1].T
-            deltas[i] = err_h * self._act_deriv(self._activations[i + 1], self._zs[i])
+            # Apply dropout mask to error signal (same mask as forward pass)
+            mask = self._masks[i + 1] if hasattr(self, '_masks') and i + 1 < len(self._masks) else None
+            if mask is not None:
+                err_h = err_h * mask / (1.0 - self.dropout_rate)
+            # Use pre-dropout activation for derivative computation
+            act_for_deriv = (
+                self._pre_dropout[i] if hasattr(self, '_pre_dropout') else self._activations[i + 1]
+            )
+            deltas[i] = err_h * self._act_deriv(act_for_deriv, self._zs[i])
 
         self._step += 1
         sign = -1.0 if (self.loss_fn == "cross_entropy" or self.softmax_output) else 1.0
