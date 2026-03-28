@@ -192,7 +192,6 @@ def deduplicate_entries() -> dict:
         return {"status": "ok", "duplicates_found": 0, "duplicates_removed": 0,
                 "archive_file": None}
 
-    n = len(entries)
     duplicate_indices: set[int] = set()
     duplicate_pairs: list[dict] = []
 
