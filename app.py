@@ -217,12 +217,14 @@ def datasets():
 # ── Routes: Knowledge AI chat ────────────────────────────────────────
 
 # Chat command detection patterns
-_URL_RE = re.compile(r'https?://[^\s<>"\'`,;)\]]+', re.IGNORECASE)
+_URL_PATTERN = re.compile(r'https?://[^\s<>"\'`,;)\]]+', re.IGNORECASE)
 _RESEARCH_PREFIXES = [
     "research", "learn about", "study", "find information about",
     "teach yourself about", "gather knowledge on", "look up",
     "find out about", "investigate",
 ]
+_CRAWL_ACTION_VERBS = r'^(crawl|scrape|visit|fetch|go to|get|learn from|read)\s+'
+MAX_RESEARCH_URLS = 5
 
 
 def _detect_chat_command(question: str) -> dict | None:
@@ -233,7 +235,7 @@ def _detect_chat_command(question: str) -> dict | None:
     lower = question.lower().strip()
 
     # Detect URLs → offer crawling
-    urls = _URL_RE.findall(question)
+    urls = _URL_PATTERN.findall(question)
     if urls:
         # Extract topic context from surrounding text
         text = question
@@ -241,7 +243,7 @@ def _detect_chat_command(question: str) -> dict | None:
             text = text.replace(u, "")
         topic = text.strip(" .,;:!?")
         topic = re.sub(
-            r'^(crawl|scrape|visit|fetch|go to|get|learn from|read)\s+',
+            _CRAWL_ACTION_VERBS,
             '', topic, flags=re.IGNORECASE,
         ).strip() or "general"
         return {"type": "crawl", "urls": urls, "topic": topic}
@@ -295,7 +297,7 @@ def _execute_research(topic: str, urls: list[str] | None = None) -> dict:
     # Crawl specific URLs if provided
     if urls:
         from site_crawler import add_site_job
-        for url in urls[:5]:  # Limit to 5 URLs
+        for url in urls[:MAX_RESEARCH_URLS]:
             try:
                 r = add_site_job(url=url, topic=topic, max_pages=10, max_depth=1)
                 url_entries = r.get("entries", 0)
@@ -343,8 +345,9 @@ def _background_retrain() -> None:
                 augment=True, verbose=False,
             )
             _load_knowledge_model()
-        except Exception:
-            pass
+            print("Background retrain complete — knowledge model reloaded.")
+        except Exception as exc:
+            print(f"Background retrain failed: {type(exc).__name__}: {exc}")
 
     t = threading.Thread(target=_do_retrain, daemon=True)
     t.start()
@@ -506,7 +509,7 @@ def chat_research():
     if not isinstance(urls, list):
         urls = []
     # Validate URLs
-    safe_urls = [u for u in urls[:5] if isinstance(u, str) and _URL_RE.match(u)]
+    safe_urls = [u for u in urls[:MAX_RESEARCH_URLS] if isinstance(u, str) and _URL_PATTERN.match(u)]
 
     result = _execute_research(topic, urls=safe_urls if safe_urls else None)
     return jsonify({

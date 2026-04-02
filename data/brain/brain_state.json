@@ -1,9 +1,9 @@
 {
   "_created_at": "2026-03-31T21:30:30.566263+00:00",
-  "_updated_at": "2026-04-02T00:14:35.712366+00:00",
-  "last_scan": "2026-04-02T00:14:35.712314+00:00",
+  "_updated_at": "2026-04-02T00:29:14.924421+00:00",
+  "last_scan": "2026-04-02T00:29:14.924373+00:00",
   "manifest": {
-    "scanned_at": "2026-04-02T00:14:35.702399+00:00",
+    "scanned_at": "2026-04-02T00:29:14.914342+00:00",
     "modules": {
       "neural_network.py": {
         "lines": 442,
@@ -62,7 +62,7 @@
         "exists": true
       },
       "app.py": {
-        "lines": 642,
+        "lines": 645,
         "functions": 22,
         "function_names": [
           "_train",
@@ -600,6 +600,43 @@
           "test_index_has_aria_attributes",
           "test_memory_context",
           "test_memory_performance"
+        ]
+      },
+      "test_chat_research.py": {
+        "count": 32,
+        "names": [
+          "test_research_prefix",
+          "test_learn_about_prefix",
+          "test_study_prefix",
+          "test_investigate_prefix",
+          "test_find_information_about",
+          "test_url_detection",
+          "test_multiple_urls",
+          "test_url_with_no_surrounding_text",
+          "test_regular_question_returns_none",
+          "test_regular_long_question_returns_none",
+          "test_research_too_short_topic_returns_none",
+          "test_case_insensitive_research",
+          "test_case_insensitive_learn",
+          "test_chat_research_command",
+          "test_chat_research_no_results",
+          "test_chat_url_crawl",
+          "test_chat_url_no_results",
+          "test_chat_regular_question_not_intercepted",
+          "test_chat_empty_question_still_rejected",
+          "test_chat_too_long_still_rejected",
+          "test_research_endpoint_success",
+          "test_research_endpoint_no_results",
+          "test_research_endpoint_missing_topic",
+          "test_research_endpoint_empty_topic",
+          "test_research_endpoint_topic_too_long",
+          "test_research_endpoint_with_urls",
+          "test_research_endpoint_invalid_urls_filtered",
+          "test_assess_filters_unknown_answers",
+          "test_filter_logic_excludes_extra_entries",
+          "test_filter_keeps_all_when_all_match",
+          "test_execute_research_calls_crawlers",
+          "test_execute_research_handles_failures_gracefully"
         ]
       },
       "test_digest_engine.py": {
@@ -1286,12 +1323,12 @@
       "ml-watcher"
     ],
     "stats": {
-      "total_python_lines": 9651,
+      "total_python_lines": 9654,
       "total_functions": 315,
       "total_modules": 18,
       "total_routes": 20,
-      "total_tests": 225,
-      "total_test_files": 11,
+      "total_tests": 257,
+      "total_test_files": 12,
       "total_data_files": 450,
       "total_model_files": 18,
       "total_templates": 3,
