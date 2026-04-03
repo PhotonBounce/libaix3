@@ -377,8 +377,26 @@
       "priority": "medium",
       "enabled": false,
       "added_at": "2026-04-03T17:12:47.615681+00:00"
+    },
+    {
+      "name": "test_topic_efcd14d1",
+      "priority": "low",
+      "enabled": true,
+      "added_at": "2026-04-03T17:20:12.432646+00:00"
+    },
+    {
+      "name": "dup_test_fcc0c3f9",
+      "priority": "low",
+      "enabled": true,
+      "added_at": "2026-04-03T17:20:12.526207+00:00"
+    },
+    {
+      "name": "toggle_test_788fe907",
+      "priority": "medium",
+      "enabled": false,
+      "added_at": "2026-04-03T17:20:12.620755+00:00"
     }
   ],
   "auto_discover": true,
-  "last_updated": "2026-04-03T17:12:47.617229+00:00"
+  "last_updated": "2026-04-03T17:20:12.622159+00:00"
 }

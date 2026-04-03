@@ -50,6 +50,44 @@ try:
 except ImportError:
     _BRAIN_AVAILABLE = False
 
+# Boil engine + Reasoning engine + Anon crawler (lazy imports)
+try:
+    from boil_engine import (
+        get_boil_state,
+        get_improvement_log,
+        is_boiling,
+        load_boil_config,
+        run_boil_tick,
+        save_boil_config,
+        start_boil_background,
+        stop_boil_background,
+    )
+    _BOIL_AVAILABLE = True
+except ImportError:
+    _BOIL_AVAILABLE = False
+
+try:
+    from reasoning_engine import (
+        build_reasoning_base as _build_reasoning,
+        get_reasoning_engine,
+        reason_about,
+    )
+    _REASONING_AVAILABLE = True
+except ImportError:
+    _REASONING_AVAILABLE = False
+
+try:
+    from anon_crawler import (
+        anon_crawl_page,
+        anon_crawl_site,
+        get_anon_stats,
+        load_anon_config,
+        save_anon_config,
+    )
+    _ANON_AVAILABLE = True
+except ImportError:
+    _ANON_AVAILABLE = False
+
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)
 app.register_blueprint(admin_bp)
