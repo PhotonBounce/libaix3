@@ -84,6 +84,63 @@
 
     .footer{padding:1rem;text-align:center;font-size:.7rem;color:#484f58}
     .footer a{color:#58a6ff;text-decoration:none}
+
+    /* ═══════ STATS PAGE ═══════ */
+    .stats-container{padding:2rem 1rem;max-width:1000px;width:100%;margin:0 auto}
+    .stats-container h2{font-size:1.3rem;color:#e6edf3;margin-bottom:1rem}
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin-bottom:1.5rem}
+    .stat-card{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:1.2rem}
+    .stat-card .label{color:#8b949e;font-size:.8rem;margin-bottom:.3rem}
+    .stat-card .value{font-size:1.6rem;font-weight:700;color:#58a6ff}
+    .stat-card .value.green{color:#3fb950}
+    .stat-card .value.purple{color:#bc8cff}
+    .stat-card .value.orange{color:#d29922}
+    .stat-section{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:1.2rem;margin-bottom:1rem}
+    .stat-section h3{font-size:1rem;color:#8b949e;margin-bottom:.8rem;border-bottom:1px solid #30363d;padding-bottom:.4rem}
+    .stat-list{list-style:none;padding:0}
+    .stat-list li{padding:.3rem 0;font-size:.85rem;color:#c9d1d9;border-bottom:1px solid #21262d}
+    .stat-list li:last-child{border-bottom:none}
+    .stat-list .k{color:#8b949e;min-width:140px;display:inline-block}
+
+    /* ═══════ FORMS PAGE ═══════ */
+    .forms-container{padding:2rem 1rem;max-width:900px;width:100%;margin:0 auto}
+    .forms-container h2{font-size:1.3rem;color:#e6edf3;margin-bottom:1rem}
+    .form-section{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:1.5rem;margin-bottom:1rem}
+    .form-section h3{font-size:1rem;color:#8b949e;margin-bottom:.8rem}
+    .form-input{width:100%;padding:.6rem .8rem;border:1px solid #30363d;border-radius:6px;background:#0d1117;color:#e6edf3;font-size:.9rem;margin-bottom:.8rem;outline:none;font-family:inherit}
+    .form-input:focus{border-color:#58a6ff}
+    .form-input::placeholder{color:#484f58}
+    textarea.form-input{min-height:80px;resize:vertical}
+    .form-btn{padding:.6rem 1.2rem;border:none;border-radius:8px;color:#fff;font-size:.85rem;font-weight:600;cursor:pointer;transition:opacity .15s;margin-right:.5rem}
+    .form-btn:hover{opacity:.85}
+    .form-btn:disabled{opacity:.4;cursor:wait}
+    .form-btn-blue{background:linear-gradient(135deg,#1f6feb,#388bfd)}
+    .form-btn-green{background:linear-gradient(135deg,#238636,#2ea043)}
+    .form-btn-gray{background:#30363d}
+    .form-results{margin-top:1rem;padding:.8rem;background:#0d1117;border:1px solid #30363d;border-radius:8px;font-size:.85rem;color:#c9d1d9;max-height:300px;overflow-y:auto;display:none}
+    .form-results.show{display:block}
+    .form-results pre{white-space:pre-wrap;word-wrap:break-word}
+    .profile-list{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.5rem}
+    .profile-chip{padding:.3rem .7rem;background:#21262d;border:1px solid #30363d;border-radius:16px;font-size:.8rem;color:#c9d1d9;cursor:pointer}
+    .profile-chip:hover{border-color:#58a6ff}
+    .profile-chip .x{color:#f85149;margin-left:.4rem;cursor:pointer}
+
+    /* ═══════ BOIL PAGE ═══════ */
+    .boil-container{padding:2rem 1rem;max-width:900px;width:100%;margin:0 auto}
+    .boil-container h2{font-size:1.3rem;color:#e6edf3;margin-bottom:1rem}
+    .boil-status{display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem}
+    .boil-indicator{width:16px;height:16px;border-radius:50%;background:#484f58;animation:none}
+    .boil-indicator.active{background:#3fb950;animation:pulse 1.5s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+    .boil-label{font-size:1.1rem;font-weight:600}
+    .boil-controls{display:flex;gap:.5rem;margin-bottom:1.5rem}
+    .boil-log{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:1rem;max-height:400px;overflow-y:auto}
+    .boil-log .entry{padding:.4rem 0;border-bottom:1px solid #21262d;font-size:.82rem}
+    .boil-log .entry:last-child{border-bottom:none}
+    .boil-log .entry .mech{color:#58a6ff;font-weight:600}
+    .boil-log .entry .detail{color:#8b949e}
+    .boil-log .entry .time{color:#484f58;font-size:.75rem;float:right}
+    .boil-log .entry .count{color:#3fb950;font-weight:600}
   </style>
 </head>
 <body>
@@ -93,6 +150,9 @@
     <div class="tabs" role="tablist">
       <button class="tab active" role="tab" aria-selected="true" aria-controls="page-chat" onclick="showPage('chat')">AI Chat</button>
       <button class="tab" role="tab" aria-selected="false" aria-controls="page-playground" onclick="showPage('playground')">Playground</button>
+      <button class="tab" role="tab" aria-selected="false" aria-controls="page-stats" onclick="showPage('stats')">📊 Stats</button>
+      <button class="tab" role="tab" aria-selected="false" aria-controls="page-forms" onclick="showPage('forms')">📝 Forms</button>
+      <button class="tab" role="tab" aria-selected="false" aria-controls="page-boil" onclick="showPage('boil')">🔥 Boil</button>
     </div>
     <div class="spacer"></div>
     <span class="stats-badge" id="statsBadge">Loading…</span>
@@ -224,6 +284,100 @@
             <tbody id="trainTBody"></tbody>
           </table>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- STATS PAGE                                                      -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <div class="page" id="page-stats" role="tabpanel">
+    <div class="stats-container">
+      <h2>📊 System Statistics</h2>
+      <div class="stats-grid" id="statsCards">
+        <div class="stat-card"><div class="label">Knowledge Topics</div><div class="value" id="statTopics">—</div></div>
+        <div class="stat-card"><div class="label">Domains</div><div class="value purple" id="statDomains">—</div></div>
+        <div class="stat-card"><div class="label">Vocab Size</div><div class="value orange" id="statVocab">—</div></div>
+        <div class="stat-card"><div class="label">Models Trained</div><div class="value green" id="statModels">—</div></div>
+        <div class="stat-card"><div class="label">Boil Status</div><div class="value" id="statBoil">—</div></div>
+        <div class="stat-card"><div class="label">Reasoning Rules</div><div class="value purple" id="statRules">—</div></div>
+        <div class="stat-card"><div class="label">Concepts</div><div class="value orange" id="statConcepts">—</div></div>
+        <div class="stat-card"><div class="label">Anon Requests</div><div class="value green" id="statAnon">—</div></div>
+      </div>
+      <div class="stat-section">
+        <h3>Knowledge Domains</h3>
+        <ul class="stat-list" id="statDomainList"></ul>
+      </div>
+      <div class="stat-section">
+        <h3>Reasoning Engine</h3>
+        <ul class="stat-list" id="statReasonList"></ul>
+      </div>
+      <div class="stat-section">
+        <h3>Boil Engine Improvements</h3>
+        <ul class="stat-list" id="statBoilList"></ul>
+      </div>
+      <button class="form-btn form-btn-blue" onclick="loadAllStats()">🔄 Refresh Stats</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- FORMS PAGE                                                      -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <div class="page" id="page-forms" role="tabpanel">
+    <div class="forms-container">
+      <h2>📝 Form Automation</h2>
+      <div class="form-section">
+        <h3>Extract Forms from URL</h3>
+        <input type="text" class="form-input" id="formUrl" placeholder="https://example.com/form-page">
+        <button class="form-btn form-btn-blue" id="extractBtn" onclick="extractForms()">🔍 Extract Forms</button>
+        <div class="form-results" id="extractResults"></div>
+      </div>
+      <div class="form-section">
+        <h3>Fill with Prompt</h3>
+        <p style="font-size:.8rem;color:#8b949e;margin-bottom:.5rem">Type field=value pairs, e.g. <code>name=John email=john@example.com city=Boston</code></p>
+        <textarea class="form-input" id="fillPrompt" placeholder="name=John email=john@example.com phone=555-1234"></textarea>
+        <button class="form-btn form-btn-green" onclick="parseFillPrompt()">✨ Parse & Preview</button>
+        <div class="form-results" id="fillResults"></div>
+      </div>
+      <div class="form-section">
+        <h3>Profiles</h3>
+        <div style="display:flex;gap:.5rem;margin-bottom:.5rem">
+          <input type="text" class="form-input" id="profileName" placeholder="Profile name" style="margin-bottom:0;flex:1">
+          <button class="form-btn form-btn-green" onclick="saveProfile()">💾 Save</button>
+        </div>
+        <div class="profile-list" id="profileList"></div>
+      </div>
+      <div class="form-section">
+        <h3>Fill History</h3>
+        <div class="form-results show" id="fillHistory" style="display:block;max-height:200px"><em style="color:#484f58">No history yet</em></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- BOIL PAGE                                                       -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <div class="page" id="page-boil" role="tabpanel">
+    <div class="boil-container">
+      <h2>🔥 Boil Engine — Continuous Self-Improvement</h2>
+      <div class="boil-status">
+        <div class="boil-indicator" id="boilIndicator"></div>
+        <span class="boil-label" id="boilLabel">Checking…</span>
+      </div>
+      <div class="boil-controls">
+        <button class="form-btn form-btn-green" id="boilStartBtn" onclick="boilStart()">▶ Start Boil</button>
+        <button class="form-btn form-btn-gray" id="boilStopBtn" onclick="boilStop()">⏹ Stop Boil</button>
+        <button class="form-btn form-btn-blue" onclick="boilTick()">⚡ Run One Tick</button>
+        <button class="form-btn form-btn-gray" onclick="loadBoilLog()">🔄 Refresh Log</button>
+      </div>
+      <div class="stats-grid" style="margin-bottom:1rem">
+        <div class="stat-card"><div class="label">Total Ticks</div><div class="value" id="boilTicks">—</div></div>
+        <div class="stat-card"><div class="label">Total Improvements</div><div class="value green" id="boilImprovements">—</div></div>
+        <div class="stat-card"><div class="label">Uptime</div><div class="value orange" id="boilUptime">—</div></div>
+      </div>
+      <h3 style="color:#8b949e;font-size:.95rem;margin-bottom:.8rem">Improvement Log</h3>
+      <div class="boil-log" id="boilLog">
+        <div class="entry"><span class="detail">Loading…</span></div>
       </div>
     </div>
   </div>
@@ -445,6 +599,200 @@
       ctx.save(); ctx.translate(12, pad.t + cH / 2); ctx.rotate(-Math.PI/2);
       ctx.fillText('Loss', 0, 0); ctx.restore();
     }
+
+    /* ═══════ STATS PAGE ═══════ */
+    async function loadAllStats() {
+      try {
+        const res = await fetch('/stats/all');
+        const d = await res.json();
+        document.getElementById('statTopics').textContent = d.knowledge?.total_answers || '—';
+        document.getElementById('statDomains').textContent = d.knowledge?.domains?.length || '—';
+        document.getElementById('statVocab').textContent = d.knowledge?.vocab_size || '—';
+        document.getElementById('statModels').textContent = d.models?.trained?.join(', ') || '—';
+        document.getElementById('statBoil').textContent = d.boil?.boiling ? '🔥 Active' : '⏸ Idle';
+        const rs = d.reasoning || {};
+        document.getElementById('statRules').textContent = rs.total_rules || '—';
+        document.getElementById('statConcepts').textContent = rs.total_concepts || '—';
+        document.getElementById('statAnon').textContent = d.anon?.total_requests || '0';
+        // Domain list
+        const dl = document.getElementById('statDomainList');
+        dl.innerHTML = '';
+        (d.knowledge?.domains || []).forEach(dom => {
+          const li = document.createElement('li');
+          li.innerHTML = `<span class="k">${escapeHtml(dom)}</span>`;
+          dl.appendChild(li);
+        });
+        // Reasoning list
+        const rl = document.getElementById('statReasonList');
+        rl.innerHTML = '';
+        Object.entries(rs).forEach(([k,v]) => {
+          const li = document.createElement('li');
+          li.innerHTML = `<span class="k">${escapeHtml(k)}</span> ${typeof v === 'object' ? JSON.stringify(v) : v}`;
+          rl.appendChild(li);
+        });
+        // Boil stats
+        const bl = document.getElementById('statBoilList');
+        bl.innerHTML = '';
+        if (d.boil?.state) {
+          Object.entries(d.boil.state).forEach(([k,v]) => {
+            const li = document.createElement('li');
+            li.innerHTML = `<span class="k">${escapeHtml(k)}</span> ${typeof v === 'object' ? JSON.stringify(v) : v}`;
+            bl.appendChild(li);
+          });
+        }
+      } catch(e) { console.error('Stats load error:', e); }
+    }
+
+    /* ═══════ FORMS PAGE ═══════ */
+    async function extractForms() {
+      const url = document.getElementById('formUrl').value.trim();
+      if (!url) return;
+      const btn = document.getElementById('extractBtn');
+      btn.disabled = true; btn.textContent = 'Extracting…';
+      const results = document.getElementById('extractResults');
+      try {
+        const res = await fetch('/forms/extract', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({url})
+        });
+        const d = await res.json();
+        results.classList.add('show');
+        if (d.error) { results.innerHTML = `<pre>⚠️ ${escapeHtml(d.error)}</pre>`; }
+        else { results.innerHTML = `<pre>Found ${d.count} form(s)\n\n${escapeHtml(JSON.stringify(d.forms, null, 2))}</pre>`; }
+      } catch(e) { results.classList.add('show'); results.innerHTML = `<pre>⚠️ ${escapeHtml(e.message)}</pre>`; }
+      btn.disabled = false; btn.textContent = '🔍 Extract Forms';
+    }
+
+    async function parseFillPrompt() {
+      const prompt = document.getElementById('fillPrompt').value.trim();
+      if (!prompt) return;
+      const results = document.getElementById('fillResults');
+      try {
+        const res = await fetch('/forms/fill', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({prompt})
+        });
+        const d = await res.json();
+        results.classList.add('show');
+        if (d.error) { results.innerHTML = `<pre>⚠️ ${escapeHtml(d.error)}</pre>`; }
+        else { results.innerHTML = `<pre>Parsed values:\n${escapeHtml(JSON.stringify(d.parsed_values, null, 2))}</pre>`; }
+      } catch(e) { results.classList.add('show'); results.innerHTML = `<pre>⚠️ ${escapeHtml(e.message)}</pre>`; }
+    }
+
+    async function saveProfile() {
+      const name = document.getElementById('profileName').value.trim();
+      const prompt = document.getElementById('fillPrompt').value.trim();
+      if (!name || !prompt) { alert('Enter a profile name and fill prompt first'); return; }
+      // Parse prompt into mappings
+      const pairs = prompt.match(/(\w+)\s*=\s*([^\s=]+(?:\s+[^\s=]+)*?)(?=\s+\w+\s*=|$)/g) || [];
+      const mappings = {};
+      pairs.forEach(p => { const [k,...v] = p.split('='); mappings[k.trim()] = v.join('=').trim(); });
+      try {
+        await fetch('/forms/profiles', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({name, mappings})
+        });
+        loadProfiles();
+      } catch(e) { alert('Error: ' + e.message); }
+    }
+
+    async function loadProfiles() {
+      try {
+        const res = await fetch('/forms/profiles');
+        const profiles = await res.json();
+        const list = document.getElementById('profileList');
+        list.innerHTML = '';
+        profiles.forEach(p => {
+          const chip = document.createElement('span');
+          chip.className = 'profile-chip';
+          chip.innerHTML = `${escapeHtml(p.name)} (${p.fields} fields) <span class="x" onclick="deleteProfile('${escapeHtml(p.name)}')">✕</span>`;
+          list.appendChild(chip);
+        });
+      } catch(e) {}
+    }
+
+    async function deleteProfile(name) {
+      try {
+        await fetch('/forms/profiles/' + encodeURIComponent(name), {method:'DELETE'});
+        loadProfiles();
+      } catch(e) {}
+    }
+
+    async function loadFillHistory() {
+      try {
+        const res = await fetch('/forms/history');
+        const hist = await res.json();
+        const el = document.getElementById('fillHistory');
+        if (hist.length === 0) { el.innerHTML = '<em style="color:#484f58">No history yet</em>'; return; }
+        el.innerHTML = hist.map(h => `<div style="padding:.3rem 0;border-bottom:1px solid #21262d;font-size:.82rem">${escapeHtml(h.url || 'prompt')} — ${Object.keys(h.values || {}).length} fields — ${h.timestamp || ''}</div>`).join('');
+      } catch(e) {}
+    }
+
+    /* ═══════ BOIL PAGE ═══════ */
+    async function loadBoilStatus() {
+      try {
+        const res = await fetch('/boil/status');
+        const d = await res.json();
+        const ind = document.getElementById('boilIndicator');
+        const lbl = document.getElementById('boilLabel');
+        if (d.boiling) {
+          ind.classList.add('active');
+          lbl.textContent = '🔥 Boiling — AI is actively self-improving';
+        } else {
+          ind.classList.remove('active');
+          lbl.textContent = '⏸ Idle — Boil engine is paused';
+        }
+        document.getElementById('boilTicks').textContent = d.state?.total_ticks || 0;
+        document.getElementById('boilImprovements').textContent = d.state?.total_improvements || 0;
+        const started = d.state?.started_at;
+        if (started) {
+          const mins = Math.round((Date.now() - new Date(started).getTime()) / 60000);
+          document.getElementById('boilUptime').textContent = mins > 60 ? `${Math.round(mins/60)}h ${mins%60}m` : `${mins}m`;
+        } else {
+          document.getElementById('boilUptime').textContent = '—';
+        }
+      } catch(e) {
+        document.getElementById('boilLabel').textContent = 'Unavailable';
+      }
+    }
+
+    async function boilStart() {
+      try { await fetch('/boil/start', {method:'POST'}); loadBoilStatus(); } catch(e) {}
+    }
+    async function boilStop() {
+      try { await fetch('/boil/stop', {method:'POST'}); loadBoilStatus(); } catch(e) {}
+    }
+    async function boilTick() {
+      const btn = event.target; btn.disabled = true;
+      try {
+        const res = await fetch('/boil/tick', {method:'POST'});
+        const d = await res.json();
+        loadBoilLog(); loadBoilStatus();
+      } catch(e) {}
+      btn.disabled = false;
+    }
+
+    async function loadBoilLog() {
+      try {
+        const res = await fetch('/boil/log?n=30');
+        const entries = await res.json();
+        const log = document.getElementById('boilLog');
+        if (!entries.length) { log.innerHTML = '<div class="entry"><span class="detail">No improvements yet. Start the boil engine!</span></div>'; return; }
+        log.innerHTML = entries.map(e => `<div class="entry"><span class="mech">${escapeHtml(e.mechanism || '')}</span> <span class="count">+${e.improvements || 0}</span> <span class="detail">${escapeHtml(e.details || '')}</span><span class="time">${(e.timestamp || '').slice(11,19)}</span></div>`).join('');
+      } catch(e) {
+        document.getElementById('boilLog').innerHTML = '<div class="entry"><span class="detail">Could not load log</span></div>';
+      }
+    }
+
+    /* ═══════ PAGE INIT ═══════ */
+    // Load data for pages when they become visible
+    const _origShowPage = showPage;
+    showPage = function(name) {
+      _origShowPage(name);
+      if (name === 'stats') loadAllStats();
+      if (name === 'forms') { loadProfiles(); loadFillHistory(); }
+      if (name === 'boil') { loadBoilStatus(); loadBoilLog(); }
+    };
   </script>
 </body>
 </html>

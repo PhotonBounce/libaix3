@@ -1,0 +1,32 @@
+{
+  "similarity_threshold": 0.3,
+  "analogy_threshold": 0.25,
+  "causal_confidence_decay": 0.85,
+  "max_causal_depth": 5,
+  "max_multi_hop": 3,
+  "contradiction_threshold": 0.8,
+  "min_rule_confidence": 0.4,
+  "synthesis_min_overlap": 2,
+  "generalize_min_examples": 2,
+  "cache_ttl_seconds": 300,
+  "last_build": "2026-04-03T18:06:13.086392+00:00",
+  "build_count": 2,
+  "stats": {
+    "rules_count": 96,
+    "concepts_count": 831,
+    "entries_count": 197,
+    "domains": [
+      "wifi",
+      "security",
+      "wifi_policy",
+      "troubleshooting",
+      "intranet",
+      "internet",
+      "wifi_security",
+      "networking",
+      "general"
+    ],
+    "build_time_seconds": 0.375,
+    "built_at": "2026-04-03T18:06:13.086392+00:00"
+  }
+}

@@ -180,6 +180,22 @@ if _BRAIN_AVAILABLE:
         print("LIBAIXBrain: project scan complete.")
     except Exception as _e:
         print(f"Note: Brain startup scan skipped ({type(_e).__name__}: {_e})")
+
+# Boil engine auto-start (continuous background self-improvement)
+if _BOIL_AVAILABLE:
+    try:
+        start_boil_background()
+        print("Boil engine: background self-improvement started.")
+    except Exception as _e:
+        print(f"Note: Boil engine start skipped ({type(_e).__name__}: {_e})")
+
+# Reasoning engine init
+if _REASONING_AVAILABLE:
+    try:
+        _build_reasoning()
+        print("Reasoning engine: knowledge base built.")
+    except Exception as _e:
+        print(f"Note: Reasoning engine init skipped ({type(_e).__name__}: {_e})")
 print()
 
 
@@ -677,6 +693,403 @@ def watcher_cycle():
         return jsonify(_watcher_cycle())
     except Exception:
         return jsonify({"error": "Failed to run watcher cycle"}), 500
+
+
+# ── Routes: Boil Engine API ──────────────────────────────────────────
+
+
+@app.route("/boil/status", methods=["GET"])
+def boil_status():
+    """Return boil engine status and state."""
+    if not _BOIL_AVAILABLE:
+        return jsonify({"error": "Boil engine not available"}), 503
+    try:
+        return jsonify({
+            "boiling": is_boiling(),
+            "state": get_boil_state(),
+            "config": load_boil_config(),
+        })
+    except Exception:
+        return jsonify({"error": "Failed to get boil status"}), 500
+
+
+@app.route("/boil/start", methods=["POST"])
+def boil_start():
+    """Start the boil engine background process."""
+    if not _BOIL_AVAILABLE:
+        return jsonify({"error": "Boil engine not available"}), 503
+    try:
+        ok = start_boil_background()
+        return jsonify({"started": ok, "boiling": is_boiling()})
+    except Exception:
+        return jsonify({"error": "Failed to start boil engine"}), 500
+
+
+@app.route("/boil/stop", methods=["POST"])
+def boil_stop():
+    """Stop the boil engine background process."""
+    if not _BOIL_AVAILABLE:
+        return jsonify({"error": "Boil engine not available"}), 503
+    try:
+        ok = stop_boil_background()
+        return jsonify({"stopped": ok, "boiling": is_boiling()})
+    except Exception:
+        return jsonify({"error": "Failed to stop boil engine"}), 500
+
+
+@app.route("/boil/tick", methods=["POST"])
+def boil_tick():
+    """Run a single boil improvement tick."""
+    if not _BOIL_AVAILABLE:
+        return jsonify({"error": "Boil engine not available"}), 503
+    try:
+        result = run_boil_tick()
+        return jsonify(result)
+    except Exception:
+        return jsonify({"error": "Failed to run boil tick"}), 500
+
+
+@app.route("/boil/log", methods=["GET"])
+def boil_log():
+    """Return recent improvement log entries."""
+    if not _BOIL_AVAILABLE:
+        return jsonify({"error": "Boil engine not available"}), 503
+    try:
+        n = request.args.get("n", 50, type=int)
+        return jsonify(get_improvement_log(min(n, 200)))
+    except Exception:
+        return jsonify({"error": "Failed to get boil log"}), 500
+
+
+@app.route("/boil/config", methods=["GET", "POST"])
+def boil_config_endpoint():
+    """Get or update boil engine configuration."""
+    if not _BOIL_AVAILABLE:
+        return jsonify({"error": "Boil engine not available"}), 503
+    try:
+        if request.method == "POST":
+            data = request.get_json(force=True)
+            cfg = load_boil_config()
+            cfg.update(data)
+            save_boil_config(cfg)
+            return jsonify({"saved": True, "config": cfg})
+        return jsonify(load_boil_config())
+    except Exception:
+        return jsonify({"error": "Failed to handle boil config"}), 500
+
+
+# ── Routes: Reasoning Engine API ─────────────────────────────────────
+
+
+@app.route("/reason", methods=["POST"])
+def reason_endpoint():
+    """Apply deductive reasoning to a question."""
+    if not _REASONING_AVAILABLE:
+        return jsonify({"error": "Reasoning engine not available"}), 503
+    data = request.get_json(force=True)
+    question = str(data.get("question", "")).strip()
+    if not question:
+        return jsonify({"error": "Question is required"}), 400
+    try:
+        result = reason_about(question)
+        return jsonify(result)
+    except Exception:
+        return jsonify({"error": "Reasoning failed"}), 500
+
+
+@app.route("/reason/stats", methods=["GET"])
+def reason_stats():
+    """Return reasoning engine statistics."""
+    if not _REASONING_AVAILABLE:
+        return jsonify({"error": "Reasoning engine not available"}), 503
+    try:
+        engine = get_reasoning_engine()
+        return jsonify(engine.get_stats())
+    except Exception:
+        return jsonify({"error": "Failed to get reasoning stats"}), 500
+
+
+@app.route("/reason/rebuild", methods=["POST"])
+def reason_rebuild():
+    """Rebuild the reasoning knowledge base."""
+    if not _REASONING_AVAILABLE:
+        return jsonify({"error": "Reasoning engine not available"}), 503
+    try:
+        result = _build_reasoning()
+        return jsonify(result)
+    except Exception:
+        return jsonify({"error": "Failed to rebuild reasoning base"}), 500
+
+
+# ── Routes: Anonymous Crawler API ────────────────────────────────────
+
+
+@app.route("/anon/stats", methods=["GET"])
+def anon_stats():
+    """Return anonymous crawler statistics."""
+    if not _ANON_AVAILABLE:
+        return jsonify({"error": "Anonymous crawler not available"}), 503
+    try:
+        return jsonify(get_anon_stats())
+    except Exception:
+        return jsonify({"error": "Failed to get anon stats"}), 500
+
+
+@app.route("/anon/crawl", methods=["POST"])
+def anon_crawl():
+    """Anonymously crawl a URL for knowledge."""
+    if not _ANON_AVAILABLE:
+        return jsonify({"error": "Anonymous crawler not available"}), 503
+    data = request.get_json(force=True)
+    url = str(data.get("url", "")).strip()
+    topic = str(data.get("topic", "general")).strip()
+    if not url:
+        return jsonify({"error": "URL is required"}), 400
+    try:
+        result = anon_crawl_page(url, topic)
+        return jsonify(result)
+    except Exception:
+        return jsonify({"error": "Anonymous crawl failed"}), 500
+
+
+@app.route("/anon/crawl-site", methods=["POST"])
+def anon_crawl_site_endpoint():
+    """Anonymously crawl a full site for knowledge."""
+    if not _ANON_AVAILABLE:
+        return jsonify({"error": "Anonymous crawler not available"}), 503
+    data = request.get_json(force=True)
+    url = str(data.get("url", "")).strip()
+    topic = str(data.get("topic", "general")).strip()
+    max_pages = min(int(data.get("max_pages", 20)), 100)
+    max_depth = min(int(data.get("max_depth", 2)), 5)
+    if not url:
+        return jsonify({"error": "URL is required"}), 400
+    try:
+        result = anon_crawl_site(url, topic, max_pages=max_pages, max_depth=max_depth)
+        return jsonify(result)
+    except Exception:
+        return jsonify({"error": "Anonymous site crawl failed"}), 500
+
+
+@app.route("/anon/config", methods=["GET", "POST"])
+def anon_config_endpoint():
+    """Get or update anonymous crawler configuration."""
+    if not _ANON_AVAILABLE:
+        return jsonify({"error": "Anonymous crawler not available"}), 503
+    try:
+        if request.method == "POST":
+            data = request.get_json(force=True)
+            cfg = load_anon_config()
+            cfg.update(data)
+            save_anon_config(cfg)
+            return jsonify({"saved": True, "config": cfg})
+        return jsonify(load_anon_config())
+    except Exception:
+        return jsonify({"error": "Failed to handle anon config"}), 500
+
+
+# ── Routes: Form Filler API ──────────────────────────────────────────
+
+# Form filler (lazy import)
+try:
+    from form_filler import (
+        extract_forms,
+        classify_field,
+        parse_fill_prompt,
+        fill_form,
+        submit_form,
+        save_profile,
+        load_profiles,
+        delete_profile,
+        save_form_template,
+        load_form_templates,
+        get_fill_history,
+        extract_validation_rules,
+        FillProfile,
+    )
+    _FORM_AVAILABLE = True
+except ImportError:
+    _FORM_AVAILABLE = False
+
+
+@app.route("/forms/extract", methods=["POST"])
+def forms_extract():
+    """Extract forms from a URL or HTML content."""
+    if not _FORM_AVAILABLE:
+        return jsonify({"error": "Form filler not available"}), 503
+    data = request.get_json(force=True)
+    html = str(data.get("html", ""))
+    url = str(data.get("url", "")).strip()
+
+    # If URL provided, fetch the page first
+    if url and not html:
+        if _ANON_AVAILABLE:
+            try:
+                resp = anon_crawl_page(url, "form-extraction")
+                html = resp.get("html", resp.get("text", ""))
+            except Exception:
+                return jsonify({"error": "Failed to fetch URL"}), 500
+        else:
+            return jsonify({"error": "Provide HTML content or enable anon crawler"}), 400
+
+    if not html:
+        return jsonify({"error": "HTML content or URL is required"}), 400
+
+    try:
+        forms = extract_forms(html, base_url=url)
+        result = []
+        for f in forms:
+            fields = []
+            for fld in f.fields:
+                fields.append({
+                    "name": fld.name, "type": fld.type, "id": fld.id,
+                    "label": fld.label, "required": fld.required,
+                    "options": fld.options, "value": fld.value,
+                    "placeholder": fld.placeholder, "pattern": fld.pattern,
+                    "semantic_type": classify_field(fld),
+                })
+            result.append({
+                "url": f.url, "method": f.method, "action": f.action,
+                "encoding": f.encoding, "csrf_field": f.csrf_field,
+                "fields": fields,
+            })
+        return jsonify({"forms": result, "count": len(result)})
+    except Exception:
+        return jsonify({"error": "Failed to extract forms"}), 500
+
+
+@app.route("/forms/fill", methods=["POST"])
+def forms_fill():
+    """Fill a form with provided values or profile."""
+    if not _FORM_AVAILABLE:
+        return jsonify({"error": "Form filler not available"}), 503
+    data = request.get_json(force=True)
+    prompt = str(data.get("prompt", "")).strip()
+    values = data.get("values", {})
+    profile_name = data.get("profile", "")
+
+    # Parse prompt if provided
+    if prompt and not values:
+        values = parse_fill_prompt(prompt)
+
+    if not values:
+        return jsonify({"error": "Provide values or a fill prompt"}), 400
+
+    return jsonify({"parsed_values": values, "status": "ready"})
+
+
+@app.route("/forms/profiles", methods=["GET", "POST"])
+def forms_profiles():
+    """List or create form fill profiles."""
+    if not _FORM_AVAILABLE:
+        return jsonify({"error": "Form filler not available"}), 503
+    try:
+        if request.method == "POST":
+            data = request.get_json(force=True)
+            name = str(data.get("name", "")).strip()
+            mappings = data.get("mappings", {})
+            if not name or not mappings:
+                return jsonify({"error": "Name and mappings required"}), 400
+            from datetime import datetime, timezone
+            profile = FillProfile(
+                name=name,
+                field_mappings=mappings,
+                created_at=datetime.now(timezone.utc).isoformat(),
+            )
+            save_profile(profile)
+            return jsonify({"saved": True, "name": name})
+        profiles = load_profiles()
+        return jsonify([{"name": p.name, "fields": len(p.field_mappings), "created_at": p.created_at} for p in profiles])
+    except Exception:
+        return jsonify({"error": "Failed to handle profiles"}), 500
+
+
+@app.route("/forms/profiles/<name>", methods=["DELETE"])
+def forms_delete_profile(name: str):
+    """Delete a form fill profile."""
+    if not _FORM_AVAILABLE:
+        return jsonify({"error": "Form filler not available"}), 503
+    try:
+        ok = delete_profile(name)
+        return jsonify({"deleted": ok})
+    except Exception:
+        return jsonify({"error": "Failed to delete profile"}), 500
+
+
+@app.route("/forms/templates", methods=["GET"])
+def forms_templates():
+    """List saved form templates."""
+    if not _FORM_AVAILABLE:
+        return jsonify({"error": "Form filler not available"}), 503
+    try:
+        return jsonify(load_form_templates())
+    except Exception:
+        return jsonify({"error": "Failed to load form templates"}), 500
+
+
+@app.route("/forms/history", methods=["GET"])
+def forms_history():
+    """Return form fill history."""
+    if not _FORM_AVAILABLE:
+        return jsonify({"error": "Form filler not available"}), 503
+    try:
+        n = request.args.get("n", 50, type=int)
+        return jsonify(get_fill_history(min(n, 200)))
+    except Exception:
+        return jsonify({"error": "Failed to get form history"}), 500
+
+
+# ── Routes: Consolidated Stats API ───────────────────────────────────
+
+
+@app.route("/stats/all", methods=["GET"])
+def stats_all():
+    """Consolidated stats endpoint for the Stats page."""
+    stats = {
+        "knowledge": {
+            "loaded": knowledge_model is not None,
+            "total_answers": len(knowledge_answer_map),
+            "domains": knowledge_domains,
+            "vocab_size": knowledge_bow.vocab_size if knowledge_bow else 0,
+        },
+        "models": {
+            "trained": list(models.keys()),
+            "loss_history": {k: len(v) for k, v in loss_history.items()},
+        },
+        "boil": None,
+        "reasoning": None,
+        "anon": None,
+        "brain": None,
+        "memory": None,
+    }
+    if _BOIL_AVAILABLE:
+        try:
+            stats["boil"] = {
+                "boiling": is_boiling(),
+                "state": get_boil_state(),
+            }
+        except Exception:
+            pass
+    if _REASONING_AVAILABLE:
+        try:
+            stats["reasoning"] = get_reasoning_engine().get_stats()
+        except Exception:
+            pass
+    if _ANON_AVAILABLE:
+        try:
+            stats["anon"] = get_anon_stats()
+        except Exception:
+            pass
+    if _BRAIN_AVAILABLE:
+        try:
+            stats["brain"] = _brain_status()
+        except Exception:
+            pass
+    try:
+        stats["memory"] = build_startup_context()
+    except Exception:
+        pass
+    return jsonify(stats)
 
 
 if __name__ == "__main__":

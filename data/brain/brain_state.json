@@ -1,9 +1,9 @@
 {
   "_created_at": "2026-03-31T21:30:30.566263+00:00",
-  "_updated_at": "2026-04-03T17:20:07.836804+00:00",
-  "last_scan": "2026-04-03T17:20:07.836742+00:00",
+  "_updated_at": "2026-04-03T18:06:12.323891+00:00",
+  "last_scan": "2026-04-03T18:06:12.323837+00:00",
   "manifest": {
-    "scanned_at": "2026-04-03T17:20:07.821321+00:00",
+    "scanned_at": "2026-04-03T18:06:12.308671+00:00",
     "modules": {
       "neural_network.py": {
         "lines": 442,
@@ -62,8 +62,8 @@
         "exists": true
       },
       "app.py": {
-        "lines": 645,
-        "functions": 22,
+        "lines": 1096,
+        "functions": 42,
         "function_names": [
           "_train",
           "_load_knowledge_model",
@@ -86,7 +86,15 @@
           "brain_briefing",
           "brain_scan",
           "watcher_context",
-          "watcher_cycle"
+          "watcher_cycle",
+          "boil_status",
+          "boil_start",
+          "boil_stop",
+          "boil_tick",
+          "boil_log",
+          "boil_config_endpoint",
+          "reason_endpoint",
+          "reason_stats"
         ],
         "exists": true
       },
@@ -488,6 +496,106 @@
       {
         "path": "/watcher/cycle",
         "handler": "watcher_cycle",
+        "file": "app.py"
+      },
+      {
+        "path": "/boil/status",
+        "handler": "boil_status",
+        "file": "app.py"
+      },
+      {
+        "path": "/boil/start",
+        "handler": "boil_start",
+        "file": "app.py"
+      },
+      {
+        "path": "/boil/stop",
+        "handler": "boil_stop",
+        "file": "app.py"
+      },
+      {
+        "path": "/boil/tick",
+        "handler": "boil_tick",
+        "file": "app.py"
+      },
+      {
+        "path": "/boil/log",
+        "handler": "boil_log",
+        "file": "app.py"
+      },
+      {
+        "path": "/boil/config",
+        "handler": "boil_config_endpoint",
+        "file": "app.py"
+      },
+      {
+        "path": "/reason",
+        "handler": "reason_endpoint",
+        "file": "app.py"
+      },
+      {
+        "path": "/reason/stats",
+        "handler": "reason_stats",
+        "file": "app.py"
+      },
+      {
+        "path": "/reason/rebuild",
+        "handler": "reason_rebuild",
+        "file": "app.py"
+      },
+      {
+        "path": "/anon/stats",
+        "handler": "anon_stats",
+        "file": "app.py"
+      },
+      {
+        "path": "/anon/crawl",
+        "handler": "anon_crawl",
+        "file": "app.py"
+      },
+      {
+        "path": "/anon/crawl-site",
+        "handler": "anon_crawl_site_endpoint",
+        "file": "app.py"
+      },
+      {
+        "path": "/anon/config",
+        "handler": "anon_config_endpoint",
+        "file": "app.py"
+      },
+      {
+        "path": "/forms/extract",
+        "handler": "forms_extract",
+        "file": "app.py"
+      },
+      {
+        "path": "/forms/fill",
+        "handler": "forms_fill",
+        "file": "app.py"
+      },
+      {
+        "path": "/forms/profiles",
+        "handler": "forms_profiles",
+        "file": "app.py"
+      },
+      {
+        "path": "/forms/profiles/<name>",
+        "handler": "forms_delete_profile",
+        "file": "app.py"
+      },
+      {
+        "path": "/forms/templates",
+        "handler": "forms_templates",
+        "file": "app.py"
+      },
+      {
+        "path": "/forms/history",
+        "handler": "forms_history",
+        "file": "app.py"
+      },
+      {
+        "path": "/stats/all",
+        "handler": "stats_all",
         "file": "app.py"
       },
       {
@@ -1649,10 +1757,10 @@
       "ml-watcher"
     ],
     "stats": {
-      "total_python_lines": 9654,
-      "total_functions": 315,
+      "total_python_lines": 10105,
+      "total_functions": 335,
       "total_modules": 18,
-      "total_routes": 20,
+      "total_routes": 40,
       "total_tests": 257,
       "total_test_files": 12,
       "total_data_files": 772,
