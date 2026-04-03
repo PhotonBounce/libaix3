@@ -1,0 +1,14 @@
+[
+  {
+    "mechanism": "rescore_quality",
+    "improvements": 965027,
+    "details": "Scored 984434 entries, 965027 above threshold",
+    "timestamp": "2026-04-03T16:59:59.849713+00:00"
+  },
+  {
+    "mechanism": "merge_duplicates",
+    "improvements": 969801,
+    "details": "Found 969801 duplicate answers across 984434 entries",
+    "timestamp": "2026-04-03T17:00:03.127722+00:00"
+  }
+]
