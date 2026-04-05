@@ -259,7 +259,8 @@ def _load_perf_log() -> list[dict]:
 # ── Project fingerprinting ───────────────────────────────────────────
 
 _TRACKED_EXTENSIONS = {".py", ".json", ".html", ".txt", ".md"}
-_IGNORED_DIRS = {".git", "__pycache__", ".pytest_cache", ".ruff_cache", "node_modules"}
+_IGNORED_DIRS = {".git", "__pycache__", ".pytest_cache", ".ruff_cache", "node_modules",
+                 "extra_knowledge", "memory", "backups"}
 
 
 def compute_project_fingerprint(root: str | Path | None = None) -> str:

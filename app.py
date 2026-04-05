@@ -14,15 +14,18 @@ Then open http://localhost:5000 in your browser.
 from __future__ import annotations
 
 import json
+import os
 import re
 import secrets
+import sys
 import threading
 from pathlib import Path
 
 import numpy as np
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session
+from flask_wtf.csrf import CSRFProtect
 
-from admin import admin_bp
+from admin import admin_bp, _is_safe_url
 from knowledge_base import KNOWLEDGE, get_domains
 from neural_network import ACTIVATIONS, OPTIMIZERS, NeuralNetwork
 from project_memory import (
@@ -104,9 +107,80 @@ try:
 except ImportError:
     _ANON_AVAILABLE = False
 
+# Gamification engine (optional — graceful if not yet available)
+try:
+    from gamification import (
+        ACHIEVEMENTS,
+        award_xp,
+        generate_quiz,
+        get_leaderboard_entry,
+        get_stored_quiz,
+        load_game_state,
+        record_question,
+        save_game_state,
+        score_quiz,
+        store_quiz,
+    )
+    _GAME_AVAILABLE = True
+except ImportError:
+    _GAME_AVAILABLE = False
+
+try:
+    from conversation_engine import (
+        ConversationContext, enrich_with_context, is_followup,
+    )
+    _CONVERSATION_AVAILABLE = True
+except ImportError:
+    _CONVERSATION_AVAILABLE = False
+
 app = Flask(__name__)
-app.secret_key = secrets.token_hex(32)
+app.secret_key = os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32)
+csrf = CSRFProtect(app)
+# Only enforce CSRF on the admin blueprint (HTML forms).
+# Public JSON API endpoints are exempt — they check session auth
+# and require Content-Type: application/json which simple forms can't set.
+app.config["WTF_CSRF_CHECK_DEFAULT"] = False
 app.register_blueprint(admin_bp)
+
+
+# ── Rate limiting (in-memory token bucket) ────────────────────────────
+import time as _time  # noqa: E402
+
+_RATE_BUCKETS: dict[str, list[float]] = {}  # key -> list of timestamps
+_RATE_WINDOW = 60  # seconds
+_RATE_LIMITS: dict[str, int] = {
+    "chat": 30,       # 30 requests/min per IP
+    "predict": 60,    # 60/min
+    "train": 5,       # 5/min — expensive operation
+    "reason": 30,
+    "research": 10,
+}
+
+
+def _rate_limit(endpoint: str) -> dict | None:
+    """If the caller exceeds the rate limit, return a JSON error dict; else None."""
+    if app.config.get("TESTING"):
+        return None
+    limit = _RATE_LIMITS.get(endpoint, 60)
+    ip = request.remote_addr or "unknown"
+    key = f"{endpoint}:{ip}"
+    now = _time.monotonic()
+    bucket = _RATE_BUCKETS.setdefault(key, [])
+    # Prune old entries
+    cutoff = now - _RATE_WINDOW
+    _RATE_BUCKETS[key] = bucket = [t for t in bucket if t > cutoff]
+    if len(bucket) >= limit:
+        return {"error": "Rate limit exceeded. Try again later."}, 429
+    bucket.append(now)
+    return None
+
+
+def _require_admin():
+    """Return a 401 JSON response if the user is not logged in, else None."""
+    if not session.get("admin_logged_in"):
+        return jsonify({"error": "Authentication required"}), 401
+    return None
+
 
 # ── Logic-gate datasets ──────────────────────────────────────────────
 INPUTS = np.array([[0, 0], [0, 1], [1, 0], [1, 1]], dtype=np.float64)
@@ -122,6 +196,7 @@ models: dict[str, NeuralNetwork] = {}
 loss_history: dict[str, list[float]] = {}
 
 # Knowledge AI state
+_knowledge_lock = threading.Lock()
 knowledge_model: NeuralNetwork | None = None
 knowledge_bow: BagOfWords | None = None
 knowledge_answer_map: dict[int, str] = {}
@@ -148,11 +223,12 @@ def _load_knowledge_model() -> bool:
     ans_path = MODEL_DIR / "answer_map.json"
     if not all(p.exists() for p in (model_path, vec_path, ans_path)):
         return False
-    knowledge_model = NeuralNetwork.load(model_path)
-    knowledge_bow = BagOfWords.load(vec_path)
-    raw = json.loads(ans_path.read_text(encoding="utf-8"))
-    knowledge_answer_map = {int(k): v for k, v in raw.items()}
-    knowledge_domains = get_domains()
+    with _knowledge_lock:
+        knowledge_model = NeuralNetwork.load(model_path)
+        knowledge_bow = BagOfWords.load(vec_path)
+        raw = json.loads(ans_path.read_text(encoding="utf-8"))
+        knowledge_answer_map = {int(k): v for k, v in raw.items()}
+        knowledge_domains = get_domains()
     return True
 
 
@@ -189,8 +265,11 @@ try:
 except Exception as _e:
     print(f"Note: Project memory init skipped ({type(_e).__name__}: {_e})")
 
+# Skip heavy startup work during testing to avoid background thread interference
+_is_testing = "pytest" in sys.modules or os.environ.get("TESTING")
+
 # Brain + Watcher startup
-if _BRAIN_AVAILABLE:
+if _BRAIN_AVAILABLE and not _is_testing:
     try:
         _brain_scan_project()
         print("LIBAIXBrain: project scan complete.")
@@ -198,7 +277,7 @@ if _BRAIN_AVAILABLE:
         print(f"Note: Brain startup scan skipped ({type(_e).__name__}: {_e})")
 
 # Boil engine auto-start (continuous background self-improvement)
-if _BOIL_AVAILABLE:
+if _BOIL_AVAILABLE and not _is_testing:
     try:
         start_boil_background()
         print("Boil engine: background self-improvement started.")
@@ -206,7 +285,7 @@ if _BOIL_AVAILABLE:
         print(f"Note: Boil engine start skipped ({type(_e).__name__}: {_e})")
 
 # Reasoning engine init
-if _REASONING_AVAILABLE:
+if _REASONING_AVAILABLE and not _is_testing:
     try:
         _build_reasoning()
         print("Reasoning engine: knowledge base built.")
@@ -226,6 +305,9 @@ def index():
 
 @app.route("/predict", methods=["POST"])
 def predict():
+    rl = _rate_limit("predict")
+    if rl:
+        return jsonify(rl[0]), rl[1]
     data = request.get_json(force=True)
     try:
         a = max(0, min(1, int(data.get("a", 0))))
@@ -245,6 +327,9 @@ def predict():
 
 @app.route("/train", methods=["POST"])
 def train_endpoint():
+    rl = _rate_limit("train")
+    if rl:
+        return jsonify(rl[0]), rl[1]
     data = request.get_json(force=True)
     dataset = data.get("dataset", "xor")
     activation = data.get("activation", "sigmoid")
@@ -430,6 +515,9 @@ def chat():
       - "research <topic>" / "learn about <topic>" → multi-source crawl
       - URLs in the message → crawl the site(s) for knowledge
     """
+    rl = _rate_limit("chat")
+    if rl:
+        return jsonify(rl[0]), rl[1]
     data = request.get_json(force=True)
     question = str(data.get("question", "")).strip()
     if not question:
@@ -507,15 +595,41 @@ def chat():
             "cached": True,
         })
 
-    # Vectorize user query
-    vec = knowledge_bow.transform([question])
+    # Conversation context: resolve follow-ups
+    conv_context = None
+    enrichment = {}
+    if _CONVERSATION_AVAILABLE:
+        conv_context = ConversationContext.from_dict(session.get("conversation", {}))
+        enrichment = enrich_with_context(question, conv_context)
+    effective_question = enrichment.get("resolved_question", question) if enrichment else question
 
-    # Predict
-    probs = knowledge_model.predict(vec)[0]
+    # Vectorize user query and predict (under lock for thread safety)
+    with _knowledge_lock:
+        vec = knowledge_bow.transform([effective_question])
+        probs = knowledge_model.predict(vec)[0]
     top_idx = int(np.argmax(probs))
-    confidence = float(probs[top_idx])
+    classifier_confidence = float(probs[top_idx])
 
-    answer = knowledge_answer_map.get(top_idx, "I don't have an answer for that.")
+    classifier_answer = knowledge_answer_map.get(top_idx, "I don't have an answer for that.")
+
+    # Start with classifier result
+    answer = classifier_answer
+    confidence = classifier_confidence
+    strategy = "classifier"
+    reasoning_chain = []
+
+    # Reasoning engine fallback: if classifier is unsure, ask the reasoning engine
+    if _REASONING_AVAILABLE and classifier_confidence < 0.6:
+        try:
+            reasoning_result = reason_about(question)
+            r_confidence = reasoning_result.get("confidence", 0)
+            if r_confidence > classifier_confidence:
+                answer = reasoning_result["answer"]
+                confidence = r_confidence
+                strategy = reasoning_result.get("strategy", "reasoning")
+                reasoning_chain = reasoning_result.get("reasoning_chain", [])
+        except Exception:
+            pass  # fall back to classifier result
 
     # Find the domain for context
     # Match back to original KNOWLEDGE entry via the answer
@@ -541,25 +655,160 @@ def chat():
     if confidence < 0.15:
         answer = (
             "I'm not sure about that. Try asking about networking, internet, "
-            "intranet, or security topics. You can also say "
+            "intranet, security, programming, or algorithms. You can also say "
             "'research <topic>' to teach me something new!"
         )
         domain = "general"
+        strategy = "fallback"
 
     # Cache the response for future lookups
     cache_response(question, answer, confidence, domain)
 
-    return jsonify({
+    response = {
         "answer": answer,
         "confidence": round(confidence, 4),
         "domain": domain,
         "suggestions": suggestions,
-    })
+        "strategy": strategy,
+    }
+    if reasoning_chain:
+        response["reasoning_chain"] = reasoning_chain
+
+    # Update conversation context
+    if _CONVERSATION_AVAILABLE and conv_context is not None:
+        conv_context.add_turn(question, answer, domain, confidence)
+        session["conversation"] = conv_context.to_dict()
+        if enrichment.get("is_followup"):
+            response["followup"] = True
+            response["resolved_question"] = enrichment["resolved_question"]
+
+    # Gamification: record question and include game events
+    if _GAME_AVAILABLE:
+        try:
+            gs = load_game_state(dict(session))
+            gs, events = record_question(gs, domain, confidence)
+            session["game_state"] = save_game_state(gs)
+            response["game"] = {
+                "events": events,
+                "xp": gs.xp,
+                "level": gs.level,
+                "level_progress": get_leaderboard_entry(gs)["level_progress"],
+                "next_level_xp": get_leaderboard_entry(gs)["next_level_xp"],
+            }
+        except Exception:
+            pass
+
+    return jsonify(response)
 
 
 @app.route("/knowledge/domains", methods=["GET"])
 def knowledge_domain_list():
     return jsonify(knowledge_domains)
+
+
+# ── Routes: Gamification API ─────────────────────────────────────────
+
+@app.route("/game/status", methods=["GET"])
+def game_status():
+    """Return current game state (XP, level, achievements, streak)."""
+    if not _GAME_AVAILABLE:
+        return jsonify({"error": "Gamification module not available"}), 503
+    gs = load_game_state(dict(session))
+    return jsonify(get_leaderboard_entry(gs))
+
+
+@app.route("/game/quiz", methods=["POST"])
+def game_quiz():
+    """Generate a quiz. Body: {"domain": "networking", "count": 5}"""
+    if not _GAME_AVAILABLE:
+        return jsonify({"error": "Gamification module not available"}), 503
+    data = request.get_json(force=True)
+    domain = data.get("domain")
+    try:
+        count = int(data.get("count", 5))
+    except (TypeError, ValueError):
+        return jsonify({"error": "count must be an integer"}), 400
+    count = max(1, min(count, 20))
+    if domain and not isinstance(domain, str):
+        return jsonify({"error": "Invalid domain"}), 400
+
+    quiz = generate_quiz(domain=domain, count=count)
+    quiz_id = store_quiz(quiz)
+    # Return questions without correct answers
+    safe_quiz = [
+        {"question": q["question"], "options": q["options"], "domain": q["domain"]}
+        for q in quiz
+    ]
+    return jsonify({"quiz_id": quiz_id, "questions": safe_quiz, "count": len(safe_quiz)})
+
+
+@app.route("/game/quiz/submit", methods=["POST"])
+def game_quiz_submit():
+    """Submit quiz answers. Body: {"quiz_id": str, "answers": [int, ...]}"""
+    if not _GAME_AVAILABLE:
+        return jsonify({"error": "Gamification module not available"}), 503
+    data = request.get_json(force=True)
+    quiz_id = str(data.get("quiz_id", ""))
+    answers = data.get("answers", [])
+    if not quiz_id:
+        return jsonify({"error": "quiz_id is required"}), 400
+    if not isinstance(answers, list):
+        return jsonify({"error": "answers must be a list"}), 400
+    # Validate and coerce answers to integers
+    try:
+        answers = [int(a) for a in answers]
+    except (TypeError, ValueError):
+        return jsonify({"error": "All answers must be integers"}), 400
+
+    quiz = get_stored_quiz(quiz_id)
+    if quiz is None:
+        return jsonify({"error": "Quiz not found or expired"}), 404
+
+    result = score_quiz(answers, quiz)
+
+    # Award XP and record quiz score
+    gs = load_game_state(dict(session))
+    gs.quiz_scores.append(result)
+    gs, new_ach = award_xp(gs, result["xp_earned"], "quiz")
+    session["game_state"] = save_game_state(gs)
+
+    events = [{"type": "xp", "amount": result["xp_earned"], "reason": "quiz"}]
+    for ach_key in new_ach:
+        ach_def = ACHIEVEMENTS[ach_key]
+        events.append({
+            "type": "achievement",
+            "key": ach_key,
+            "name": ach_def["name"],
+            "desc": ach_def["desc"],
+            "icon": ach_def["icon"],
+            "xp_bonus": ach_def["xp"],
+        })
+
+    return jsonify({
+        **result,
+        "events": events,
+        "xp": gs.xp,
+        "level": gs.level,
+    })
+
+
+@app.route("/game/achievements", methods=["GET"])
+def game_achievements():
+    """Return all achievements with locked/unlocked status."""
+    if not _GAME_AVAILABLE:
+        return jsonify({"error": "Gamification module not available"}), 503
+    gs = load_game_state(dict(session))
+    result = []
+    for key, ach in ACHIEVEMENTS.items():
+        result.append({
+            "key": key,
+            "name": ach["name"],
+            "desc": ach["desc"],
+            "icon": ach["icon"],
+            "xp": ach["xp"],
+            "unlocked": key in gs.achievements,
+        })
+    return jsonify(result)
 
 
 @app.route("/chat/research", methods=["POST"])
@@ -568,6 +817,9 @@ def chat_research():
 
     POST {"topic": "...", "urls": ["..."]}  →  multi-source crawl + background retrain.
     """
+    rl = _rate_limit("research")
+    if rl:
+        return jsonify(rl[0]), rl[1]
     data = request.get_json(force=True)
     topic = str(data.get("topic", "")).strip()
     if not topic:
@@ -606,7 +858,9 @@ def knowledge_stats():
 
 @app.route("/knowledge/retrain", methods=["POST"])
 def retrain_knowledge():
-    """Re-train the knowledge model (useful after adding new knowledge)."""
+    """Re-train the knowledge model (requires admin auth)."""
+    if not session.get("admin_logged_in"):
+        return jsonify({"error": "Authentication required"}), 401
     try:
         from train_knowledge import train as train_knowledge
         train_knowledge(verbose=False)
@@ -681,6 +935,9 @@ def brain_briefing():
 @app.route("/brain/scan", methods=["POST"])
 def brain_scan():
     """Run a full brain scan cycle (scan → analyse → score → plan)."""
+    denied = _require_admin()
+    if denied:
+        return denied
     if not _BRAIN_AVAILABLE:
         return jsonify({"error": "Brain module not available"}), 503
     try:
@@ -703,6 +960,9 @@ def watcher_context():
 @app.route("/watcher/cycle", methods=["POST"])
 def watcher_cycle():
     """Run a full watcher monitoring cycle."""
+    denied = _require_admin()
+    if denied:
+        return denied
     if not _BRAIN_AVAILABLE:
         return jsonify({"error": "Watcher module not available"}), 503
     try:
@@ -876,6 +1136,9 @@ def watcher_alerts():
 @app.route("/watcher/alerts/clear", methods=["POST"])
 def watcher_clear_alerts():
     """Clear all acknowledged alerts."""
+    denied = _require_admin()
+    if denied:
+        return denied
     if not _BRAIN_AVAILABLE:
         return jsonify({"error": "Watcher module not available"}), 503
     try:
@@ -916,6 +1179,9 @@ def boil_status():
 @app.route("/boil/start", methods=["POST"])
 def boil_start():
     """Start the boil engine background process."""
+    denied = _require_admin()
+    if denied:
+        return denied
     if not _BOIL_AVAILABLE:
         return jsonify({"error": "Boil engine not available"}), 503
     try:
@@ -928,6 +1194,9 @@ def boil_start():
 @app.route("/boil/stop", methods=["POST"])
 def boil_stop():
     """Stop the boil engine background process."""
+    denied = _require_admin()
+    if denied:
+        return denied
     if not _BOIL_AVAILABLE:
         return jsonify({"error": "Boil engine not available"}), 503
     try:
@@ -940,6 +1209,9 @@ def boil_stop():
 @app.route("/boil/tick", methods=["POST"])
 def boil_tick():
     """Run a single boil improvement tick."""
+    denied = _require_admin()
+    if denied:
+        return denied
     if not _BOIL_AVAILABLE:
         return jsonify({"error": "Boil engine not available"}), 503
     try:
@@ -984,6 +1256,9 @@ def boil_config_endpoint():
 @app.route("/reason", methods=["POST"])
 def reason_endpoint():
     """Apply deductive reasoning to a question."""
+    rl = _rate_limit("reason")
+    if rl:
+        return jsonify(rl[0]), rl[1]
     if not _REASONING_AVAILABLE:
         return jsonify({"error": "Reasoning engine not available"}), 503
     data = request.get_json(force=True)
@@ -1012,6 +1287,9 @@ def reason_stats():
 @app.route("/reason/rebuild", methods=["POST"])
 def reason_rebuild():
     """Rebuild the reasoning knowledge base."""
+    denied = _require_admin()
+    if denied:
+        return denied
     if not _REASONING_AVAILABLE:
         return jsonify({"error": "Reasoning engine not available"}), 503
     try:
@@ -1038,6 +1316,9 @@ def anon_stats():
 @app.route("/anon/crawl", methods=["POST"])
 def anon_crawl():
     """Anonymously crawl a URL for knowledge."""
+    denied = _require_admin()
+    if denied:
+        return denied
     if not _ANON_AVAILABLE:
         return jsonify({"error": "Anonymous crawler not available"}), 503
     data = request.get_json(force=True)
@@ -1045,6 +1326,8 @@ def anon_crawl():
     topic = str(data.get("topic", "general")).strip()
     if not url:
         return jsonify({"error": "URL is required"}), 400
+    if not _is_safe_url(url):
+        return jsonify({"error": "URL blocked: internal/private addresses not allowed"}), 403
     try:
         result = anon_crawl_page(url, topic)
         return jsonify(result)
@@ -1055,6 +1338,9 @@ def anon_crawl():
 @app.route("/anon/crawl-site", methods=["POST"])
 def anon_crawl_site_endpoint():
     """Anonymously crawl a full site for knowledge."""
+    denied = _require_admin()
+    if denied:
+        return denied
     if not _ANON_AVAILABLE:
         return jsonify({"error": "Anonymous crawler not available"}), 503
     data = request.get_json(force=True)
@@ -1064,6 +1350,8 @@ def anon_crawl_site_endpoint():
     max_depth = min(int(data.get("max_depth", 2)), 5)
     if not url:
         return jsonify({"error": "URL is required"}), 400
+    if not _is_safe_url(url):
+        return jsonify({"error": "URL blocked: internal/private addresses not allowed"}), 403
     try:
         result = anon_crawl_site(url, topic, max_pages=max_pages, max_depth=max_depth)
         return jsonify(result)
@@ -1206,7 +1494,9 @@ def forms_profiles():
 
 @app.route("/forms/profiles/<name>", methods=["DELETE"])
 def forms_delete_profile(name: str):
-    """Delete a form fill profile."""
+    """Delete a form fill profile (requires admin auth)."""
+    if not session.get("admin_logged_in"):
+        return jsonify({"error": "Authentication required"}), 401
     if not _FORM_AVAILABLE:
         return jsonify({"error": "Form filler not available"}), 503
     try:

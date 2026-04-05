@@ -24,6 +24,7 @@ button:hover{background:#2ea043}
 </head>
 <body>
 <form class="login-box" method="POST" action="/admin/login">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div class="logo">🧠</div>
   <h1>libaix Admin</h1>
   <p class="subtitle">Knowledge Management Portal</p>

@@ -871,21 +871,29 @@ def get_digest_stats() -> dict:
         "last_removed": config.get("stats", {}).get("last_dedup_removed", 0),
     }
 
-    # Quality stats — compute live if entries are available
+    # Quality stats — compute live only if entry count is manageable
     try:
-        entries = _load_all_entries()
-        scored = score_entry_quality(entries)
-        scores = [e["quality_score"] for e in scored]
-        stats["quality"] = {
-            "total_entries": len(scored),
-            "avg_score": round(float(np.mean(scores)), 4) if scores else 0.0,
-            "min_score": round(float(np.min(scores)), 4) if scores else 0.0,
-            "max_score": round(float(np.max(scores)), 4) if scores else 0.0,
-            "low_quality_count": sum(
-                1 for s in scores
-                if s < config.get("quality_min_score", 0.3)
-            ),
-        }
+        # Fast check: count files to avoid loading 800+ JSON files on stats call
+        file_count = sum(1 for _ in sorted(EXTRA_KNOWLEDGE_DIR.glob("*.json"))) if EXTRA_KNOWLEDGE_DIR.exists() else 0
+        if file_count > 200:
+            stats["quality"] = {
+                "total_entries": file_count,
+                "note": "Skipped live scoring (too many files). Run digest cycle for cached scores.",
+            }
+        else:
+            entries = _load_all_entries()
+            scored = score_entry_quality(entries)
+            scores = [e["quality_score"] for e in scored]
+            stats["quality"] = {
+                "total_entries": len(scored),
+                "avg_score": round(float(np.mean(scores)), 4) if scores else 0.0,
+                "min_score": round(float(np.min(scores)), 4) if scores else 0.0,
+                "max_score": round(float(np.max(scores)), 4) if scores else 0.0,
+                "low_quality_count": sum(
+                    1 for s in scores
+                    if s < config.get("quality_min_score", 0.3)
+                ),
+            }
     except Exception:
         stats["quality"] = {"error": "unable to compute"}
 

@@ -141,6 +141,41 @@
     .boil-log .entry .detail{color:#8b949e}
     .boil-log .entry .time{color:#484f58;font-size:.75rem;float:right}
     .boil-log .entry .count{color:#3fb950;font-weight:600}
+
+    /* ═══════ GAMIFICATION ═══════ */
+    .xp-bar-wrap{background:#161b22;border-bottom:1px solid #30363d;padding:.5rem 1.5rem;display:flex;align-items:center;gap:1rem}
+    .xp-level{font-weight:700;font-size:.95rem;color:#bc8cff;min-width:60px}
+    .xp-track{flex:1;height:8px;background:#21262d;border-radius:4px;overflow:hidden;position:relative}
+    .xp-fill{height:100%;background:linear-gradient(90deg,#1f6feb,#bc8cff);border-radius:4px;transition:width .5s ease}
+    .xp-text{font-size:.75rem;color:#8b949e;min-width:120px;text-align:right}
+    .xp-streak{font-size:.75rem;color:#d29922;font-weight:600}
+
+    /* Achievement toast */
+    .ach-toast{position:fixed;top:80px;right:20px;background:#161b22;border:2px solid #3fb950;border-radius:12px;padding:1rem 1.2rem;color:#e6edf3;font-size:.85rem;z-index:9999;animation:slideIn .4s ease,fadeOut .4s ease 3.6s forwards;box-shadow:0 8px 32px rgba(0,0,0,.4);max-width:320px}
+    .ach-toast .ach-icon{font-size:1.8rem;margin-right:.6rem;float:left}
+    .ach-toast .ach-name{font-weight:700;color:#3fb950}
+    .ach-toast .ach-desc{color:#8b949e;font-size:.78rem;margin-top:.2rem}
+    .ach-toast .ach-xp{color:#bc8cff;font-size:.75rem;margin-top:.2rem}
+    @keyframes slideIn{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
+    @keyframes fadeOut{from{opacity:1}to{opacity:0}}
+
+    /* Quiz modal */
+    .quiz-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9000;display:none;align-items:center;justify-content:center}
+    .quiz-overlay.show{display:flex}
+    .quiz-modal{background:#161b22;border:1px solid #30363d;border-radius:14px;padding:2rem;max-width:600px;width:95%;max-height:85vh;overflow-y:auto}
+    .quiz-modal h2{font-size:1.2rem;color:#e6edf3;margin-bottom:1rem}
+    .quiz-q{margin-bottom:1.2rem}
+    .quiz-q .q-text{font-size:.9rem;color:#e6edf3;margin-bottom:.5rem;font-weight:600}
+    .quiz-q .q-domain{font-size:.65rem;color:#8b949e;background:#21262d;padding:.1rem .4rem;border-radius:4px;display:inline-block;margin-bottom:.4rem}
+    .quiz-opt{display:block;width:100%;padding:.5rem .8rem;margin:.3rem 0;border:1px solid #30363d;border-radius:8px;background:#0d1117;color:#e6edf3;font-size:.85rem;cursor:pointer;text-align:left;transition:all .15s}
+    .quiz-opt:hover{border-color:#58a6ff;background:#21262d}
+    .quiz-opt.selected{border-color:#1f6feb;background:#1f6feb22}
+    .quiz-opt.correct{border-color:#3fb950;background:#3fb95022}
+    .quiz-opt.wrong{border-color:#f85149;background:#f8514922}
+    .quiz-result{text-align:center;margin-top:1rem;padding:1rem;background:#0d1117;border-radius:10px;border:1px solid #30363d}
+    .quiz-result .score{font-size:2rem;font-weight:800;color:#3fb950}
+    .quiz-result .score.partial{color:#d29922}
+    .quiz-result .xp-gain{color:#bc8cff;font-size:.9rem;margin-top:.3rem}
   </style>
 </head>
 <body>
@@ -153,6 +188,7 @@
       <button class="tab" role="tab" aria-selected="false" aria-controls="page-stats" onclick="showPage('stats')">📊 Stats</button>
       <button class="tab" role="tab" aria-selected="false" aria-controls="page-forms" onclick="showPage('forms')">📝 Forms</button>
       <button class="tab" role="tab" aria-selected="false" aria-controls="page-boil" onclick="showPage('boil')">🔥 Boil</button>
+      <button class="tab" role="tab" aria-selected="false" aria-controls="page-dashboard" onclick="showPage('dashboard')">📈 Dashboard</button>
     </div>
     <div class="spacer"></div>
     <span class="stats-badge" id="statsBadge">Loading…</span>
@@ -163,23 +199,32 @@
   <!-- CHAT PAGE                                                      -->
   <!-- ═══════════════════════════════════════════════════════════════ -->
   <div class="page active" id="page-chat" role="tabpanel">
+    <!-- XP Bar -->
+    <div class="xp-bar-wrap" id="xpBarWrap">
+      <span class="xp-level" id="xpLevel">Lv 1</span>
+      <div class="xp-track"><div class="xp-fill" id="xpFill" style="width:0%"></div></div>
+      <span class="xp-text" id="xpText">0 XP</span>
+      <span class="xp-streak" id="xpStreak"></span>
+    </div>
     <div class="chat-container">
       <div class="chat-messages" id="chatMessages" role="log" aria-live="polite" aria-label="Chat messages">
         <div class="msg bot">
           👋 Hello! I'm <strong>libaix</strong>, a neural network built from scratch with NumPy.<br>
-          I know about <strong>networking</strong>, <strong>internet</strong>, <strong>intranet</strong>, and <strong>security</strong>.<br>
+          I know about <strong>networking</strong>, <strong>security</strong>, <strong>programming</strong>, <strong>algorithms</strong>, <strong>Git</strong>, <strong>debugging</strong>, and <strong>testing</strong>.<br>
           Ask me anything! Type <em>help</em> for topic ideas.
         </div>
       </div>
       <div class="quick-q" id="quickQuestions">
-        <button onclick="askQuick('What is TCP?')">What is TCP?</button>
-        <button onclick="askQuick('What is the OSI model?')">OSI model</button>
-        <button onclick="askQuick('What is HTTPS?')">HTTPS</button>
-        <button onclick="askQuick('What is a VPN?')">VPN</button>
-        <button onclick="askQuick('What is DNS?')">DNS</button>
+        <button onclick="askQuick('What is TCP?')">TCP</button>
+        <button onclick="askQuick('What is a decorator in Python?')">Decorators</button>
+        <button onclick="askQuick('What is Big-O notation?')">Big-O</button>
+        <button onclick="askQuick('What is Git?')">Git</button>
+        <button onclick="askQuick('How do I debug Python code?')">Debugging</button>
+        <button onclick="askQuick('What is unit testing?')">Testing</button>
         <button onclick="askQuick('What is a firewall?')">Firewall</button>
         <button onclick="askQuick('What is encryption?')">Encryption</button>
         <button onclick="askQuick('Help')">Help</button>
+        <button onclick="openQuiz()" style="border-color:#bc8cff;color:#bc8cff">🎮 Quiz</button>
       </div>
       <div class="chat-input-wrap">
         <input type="text" class="chat-input" id="chatInput" placeholder="Ask me about networking, internet, security…" autocomplete="off" aria-label="Ask a question">
@@ -382,6 +427,66 @@
     </div>
   </div>
 
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- DASHBOARD PAGE                                                  -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <div class="page" id="page-dashboard" role="tabpanel">
+    <div class="dash-container">
+      <h2>📈 Dashboard</h2>
+      <div class="dash-grid">
+        <!-- Knowledge Stats -->
+        <div class="dash-card">
+          <div class="dash-card-header"><span class="icon">📚</span><h3>Knowledge Stats</h3></div>
+          <div class="dash-metric"><span class="label">Total Entries</span><span class="val" id="dashKnEntries">—</span></div>
+          <div class="dash-metric"><span class="label">Domains</span><span class="val purple" id="dashKnDomains">—</span></div>
+          <div class="dash-metric"><span class="label">Vocab Size</span><span class="val orange" id="dashKnVocab">—</span></div>
+          <div class="dash-bar-chart" id="dashKnChart"></div>
+        </div>
+        <!-- Model Health -->
+        <div class="dash-card">
+          <div class="dash-card-header"><span class="icon">🩺</span><h3>Model Health</h3></div>
+          <div id="dashHealthRows"></div>
+        </div>
+        <!-- Game Progress -->
+        <div class="dash-card">
+          <div class="dash-card-header"><span class="icon">🎮</span><h3>Game Progress</h3></div>
+          <div class="dash-metric"><span class="label">Level</span><span class="val green" id="dashGameLevel">—</span></div>
+          <div class="dash-xp-bar"><div class="dash-xp-fill" id="dashXpFill" style="width:0%"></div></div>
+          <div style="font-size:.75rem;color:#8b949e;text-align:right" id="dashXpLabel">0 / 100 XP</div>
+          <div class="dash-ach-row"><span>🏅 Achievements</span><span id="dashAchCount">0 / 0</span></div>
+          <div class="dash-ach-row"><span>🔥 Streak</span><span id="dashStreak">0 days</span></div>
+        </div>
+      </div>
+      <div class="dash-grid-bottom">
+        <!-- Recent Conversations -->
+        <div class="dash-card">
+          <div class="dash-card-header"><span class="icon">💬</span><h3>Recent Activity</h3></div>
+          <div id="dashConvList"><span style="color:#484f58;font-size:.83rem">No conversations yet</span></div>
+        </div>
+        <!-- Domain Explorer -->
+        <div class="dash-card">
+          <div class="dash-card-header"><span class="icon">🗂️</span><h3>Domain Explorer</h3></div>
+          <div class="domain-grid" id="dashDomainGrid"><span style="color:#484f58;font-size:.83rem">Loading…</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Achievement Toast Container -->
+  <div id="achToastContainer"></div>
+
+  <!-- Quiz Modal -->
+  <div class="quiz-overlay" id="quizOverlay" onclick="if(event.target===this)closeQuiz()">
+    <div class="quiz-modal" id="quizModal">
+      <h2>🎮 Knowledge Quiz</h2>
+      <div id="quizBody"><p style="color:#8b949e">Loading quiz…</p></div>
+      <div style="display:flex;gap:.5rem;margin-top:1rem">
+        <button class="btn btn-blue" id="quizSubmitBtn" onclick="submitQuiz()" style="display:none">Submit Answers</button>
+        <button class="btn" style="background:#30363d" onclick="closeQuiz()">Close</button>
+      </div>
+    </div>
+  </div>
+
   <div class="footer">Powered by <a href="https://github.com/lindapot-art/libaix" target="_blank">libaix</a> — neural network built from scratch with NumPy</div>
 
   <script>
@@ -426,7 +531,15 @@
         let html = escapeHtml(text);
         if (extra) {
           if (extra.domain) html += ` <span class="domain-tag">${escapeHtml(extra.domain)}</span>`;
+          if (extra.strategy && extra.strategy !== 'classifier') html += ` <span class="domain-tag" style="background:#1f6feb;color:#fff">${escapeHtml(extra.strategy)}</span>`;
           if (extra.confidence !== undefined) html += `<div class="confidence">${(extra.confidence * 100).toFixed(1)}% confidence</div>`;
+          if (extra.reasoning_chain && extra.reasoning_chain.length > 0) {
+            html += '<details class="suggestions"><summary>Reasoning chain</summary>';
+            for (const step of extra.reasoning_chain) {
+              html += `<div class="alt">${escapeHtml(step)}</div>`;
+            }
+            html += '</details>';
+          }
           if (extra.suggestions && extra.suggestions.length > 1) {
             html += '<details class="suggestions"><summary>Related answers</summary>';
             for (let i = 1; i < extra.suggestions.length; i++) {
@@ -456,7 +569,7 @@
         });
         const d = await res.json();
         if (d.error) { addMsg('⚠️ ' + d.error, false); }
-        else { addMsg(d.answer, false, d); }
+        else { addMsg(d.answer, false, d); handleGameEvents(d.game); trackConversation(q, d); }
       } catch(e) { addMsg('⚠️ Network error: ' + e.message, false); }
       btn.disabled = false;
       chatInput.focus();
@@ -784,6 +897,237 @@
       }
     }
 
+    /* ═══════ GAMIFICATION ═══════ */
+    let _quizId = null;
+    let _quizQuestions = [];
+
+    function updateXpBar(game) {
+      if (!game) return;
+      document.getElementById('xpLevel').textContent = 'Lv ' + (game.level || 1);
+      document.getElementById('xpFill').style.width = (game.level_progress || 0) + '%';
+      document.getElementById('xpText').textContent = (game.xp || 0) + ' / ' + (game.next_level_xp || 100) + ' XP';
+    }
+
+    function showAchievementToast(ach) {
+      const container = document.getElementById('achToastContainer');
+      const toast = document.createElement('div');
+      toast.className = 'ach-toast';
+      toast.innerHTML = `<span class="ach-icon">${ach.icon || '🏅'}</span><div><div class="ach-name">${escapeHtml(ach.name)}</div><div class="ach-desc">${escapeHtml(ach.desc)}</div>${ach.xp_bonus ? '<div class="ach-xp">+' + ach.xp_bonus + ' XP</div>' : ''}</div>`;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 4000);
+    }
+
+    function handleGameEvents(game) {
+      if (!game) return;
+      updateXpBar(game);
+      if (game.events) {
+        game.events.forEach(e => {
+          if (e.type === 'achievement') showAchievementToast(e);
+        });
+      }
+    }
+
+    // Load game status on page load
+    fetch('/game/status').then(r=>r.json()).then(d=>{
+      if (!d.error) {
+        updateXpBar({level: d.level, level_progress: d.level_progress, xp: d.xp, next_level_xp: d.next_level_xp});
+        if (d.streak_days > 0) document.getElementById('xpStreak').textContent = '🔥 ' + d.streak_days + 'd streak';
+      }
+    }).catch(()=>{});
+
+    async function openQuiz(domain) {
+      const overlay = document.getElementById('quizOverlay');
+      overlay.classList.add('show');
+      document.getElementById('quizBody').innerHTML = '<p style="color:#8b949e">Loading quiz…</p>';
+      document.getElementById('quizSubmitBtn').style.display = 'none';
+      try {
+        const body = {count: 5};
+        if (domain) body.domain = domain;
+        const res = await fetch('/game/quiz', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+        const d = await res.json();
+        if (d.error) { document.getElementById('quizBody').innerHTML = '<p>⚠️ ' + escapeHtml(d.error) + '</p>'; return; }
+        _quizId = d.quiz_id;
+        _quizQuestions = d.questions;
+        renderQuiz(d.questions);
+        document.getElementById('quizSubmitBtn').style.display = '';
+      } catch(e) { document.getElementById('quizBody').innerHTML = '<p>⚠️ ' + escapeHtml(e.message) + '</p>'; }
+    }
+
+    function renderQuiz(questions) {
+      const body = document.getElementById('quizBody');
+      body.innerHTML = '';
+      questions.forEach((q, qi) => {
+        const div = document.createElement('div');
+        div.className = 'quiz-q';
+        div.innerHTML = '<span class="q-domain">' + escapeHtml(q.domain) + '</span><div class="q-text">' + (qi+1) + '. ' + escapeHtml(q.question) + '</div>';
+        q.options.forEach((opt, oi) => {
+          const btn = document.createElement('button');
+          btn.className = 'quiz-opt';
+          btn.textContent = opt;
+          btn.onclick = () => selectQuizOpt(qi, oi);
+          btn.dataset.qi = qi;
+          btn.dataset.oi = oi;
+          div.appendChild(btn);
+        });
+        body.appendChild(div);
+      });
+    }
+
+    function selectQuizOpt(qi, oi) {
+      document.querySelectorAll('.quiz-opt[data-qi="'+qi+'"]').forEach(b => b.classList.remove('selected'));
+      document.querySelector('.quiz-opt[data-qi="'+qi+'"][data-oi="'+oi+'"]').classList.add('selected');
+    }
+
+    async function submitQuiz() {
+      const answers = [];
+      for (let i = 0; i < _quizQuestions.length; i++) {
+        const sel = document.querySelector('.quiz-opt.selected[data-qi="'+i+'"]');
+        answers.push(sel ? parseInt(sel.dataset.oi) : -1);
+      }
+      document.getElementById('quizSubmitBtn').style.display = 'none';
+      try {
+        const res = await fetch('/game/quiz/submit', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({quiz_id: _quizId, answers})});
+        const d = await res.json();
+        if (d.error) { alert(d.error); return; }
+        const body = document.getElementById('quizBody');
+        const scoreClass = d.percent >= 100 ? '' : 'partial';
+        body.innerHTML += '<div class="quiz-result"><div class="score ' + scoreClass + '">' + d.score + '/' + d.total + ' (' + d.percent + '%)</div><div class="xp-gain">+' + d.xp_earned + ' XP</div></div>';
+        handleGameEvents(d);
+      } catch(e) { alert('Error: ' + e.message); }
+    }
+
+    function closeQuiz() {
+      document.getElementById('quizOverlay').classList.remove('show');
+    }
+
+    /* ═══════ DASHBOARD ═══════ */
+    const _dashConversations = [];
+
+    function trackConversation(question, data) {
+      _dashConversations.unshift({
+        question: question,
+        domain: data.domain || '—',
+        confidence: data.confidence,
+        time: new Date()
+      });
+      if (_dashConversations.length > 5) _dashConversations.length = 5;
+    }
+
+    const DOMAIN_COLORS = {networking:'net',internet:'net',intranet:'net',programming:'prog',python:'prog',security:'sec',algorithms:'algo',git:'git',debugging:'debug',testing:'test'};
+    function domainClass(d) { return DOMAIN_COLORS[d.toLowerCase()] || 'default'; }
+    const DOMAIN_BAR_COLORS = {net:'#1f6feb',prog:'#238636',sec:'#da3633',algo:'#bc8cff',git:'#d29922',debug:'#f78166',test:'#3fb950',default:'#8b949e'};
+
+    function animateValue(el, end) {
+      el.classList.add('animated');
+      const start = 0;
+      const duration = 600;
+      const t0 = performance.now();
+      function step(ts) {
+        const p = Math.min((ts - t0) / duration, 1);
+        el.textContent = Math.round(start + (end - start) * p);
+        if (p < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
+    async function loadDashboard() {
+      // Fetch all data in parallel
+      const [knRes, healthRes, gameRes, domRes] = await Promise.allSettled([
+        fetch('/knowledge/stats').then(r => r.json()),
+        fetch('/api/health').then(r => r.json()),
+        fetch('/game/status').then(r => r.json()),
+        fetch('/knowledge/domains').then(r => r.json()),
+      ]);
+
+      // ── Knowledge Stats
+      if (knRes.status === 'fulfilled') {
+        const kn = knRes.value;
+        animateValue(document.getElementById('dashKnEntries'), kn.total_answers || 0);
+        animateValue(document.getElementById('dashKnDomains'), kn.domains?.length || 0);
+        animateValue(document.getElementById('dashKnVocab'), kn.vocab_size || 0);
+      }
+
+      // ── Domain bar chart (from domain list + knowledge stats)
+      if (domRes.status === 'fulfilled' && knRes.status === 'fulfilled') {
+        const domains = domRes.value;
+        const chart = document.getElementById('dashKnChart');
+        chart.innerHTML = '';
+        if (Array.isArray(domains) && domains.length) {
+          const maxCount = domains.length; // show relative proportion
+          domains.forEach(d => {
+            const name = typeof d === 'string' ? d : d.name || d;
+            const count = typeof d === 'object' && d.count ? d.count : 1;
+            const dc = domainClass(name);
+            const color = DOMAIN_BAR_COLORS[dc] || DOMAIN_BAR_COLORS.default;
+            const pct = Math.max(8, (count / (maxCount || 1)) * 100);
+            chart.innerHTML += `<div class="dash-bar-row"><span class="dash-bar-label">${escapeHtml(name)}</span><div class="dash-bar-track"><div class="dash-bar-fill" style="width:${pct}%;background:${color}"></div></div><span class="dash-bar-count">${count}</span></div>`;
+          });
+        }
+      }
+
+      // ── Model Health
+      if (healthRes.status === 'fulfilled') {
+        const h = healthRes.value;
+        const rows = document.getElementById('dashHealthRows');
+        rows.innerHTML = '';
+        const statusDot = h.status === 'ok' ? 'ok' : 'err';
+        rows.innerHTML += `<div class="dash-status-row"><span class="dash-status-dot ${statusDot}"></span><span>API Status: <strong>${escapeHtml(h.status || 'unknown')}</strong></span></div>`;
+        rows.innerHTML += `<div class="dash-status-row"><span class="dash-status-dot ${h.knowledge_loaded ? 'ok' : 'err'}"></span><span>Knowledge Model: <strong>${h.knowledge_loaded ? 'Loaded' : 'Not Loaded'}</strong></span></div>`;
+        if (h.models_ready) {
+          rows.innerHTML += `<div class="dash-status-row"><span class="dash-status-dot ok"></span><span>Models Ready: <strong>${h.models_ready.join(', ') || 'none'}</strong></span></div>`;
+        }
+        if (h.datasets) {
+          rows.innerHTML += `<div class="dash-status-row"><span class="dash-status-dot ok"></span><span>Datasets: <strong>${h.datasets.join(', ')}</strong></span></div>`;
+        }
+      } else {
+        document.getElementById('dashHealthRows').innerHTML = '<div class="dash-status-row"><span class="dash-status-dot err"></span><span>Health endpoint unavailable</span></div>';
+      }
+
+      // ── Game Progress
+      if (gameRes.status === 'fulfilled' && !gameRes.value.error) {
+        const g = gameRes.value;
+        animateValue(document.getElementById('dashGameLevel'), g.level || 1);
+        document.getElementById('dashXpFill').style.width = (g.level_progress || 0) + '%';
+        document.getElementById('dashXpLabel').textContent = (g.xp || 0) + ' / ' + (g.next_level_xp || 100) + ' XP';
+        const unlocked = g.achievements_unlocked || 0;
+        const total = g.total_achievements || 0;
+        document.getElementById('dashAchCount').textContent = unlocked + ' / ' + total;
+        const streak = g.streak_days || 0;
+        document.getElementById('dashStreak').textContent = streak > 0 ? streak + ' days 🔥' : '0 days';
+      } else {
+        document.getElementById('dashGameLevel').textContent = '—';
+      }
+
+      // ── Recent Conversations
+      const convEl = document.getElementById('dashConvList');
+      if (_dashConversations.length === 0) {
+        convEl.innerHTML = '<span style="color:#484f58;font-size:.83rem">No conversations yet — ask something in Chat!</span>';
+      } else {
+        convEl.innerHTML = _dashConversations.map(c => {
+          const ts = c.time.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+          const conf = c.confidence !== undefined ? (c.confidence * 100).toFixed(1) + '%' : '—';
+          return `<div class="dash-conv-item"><div class="dash-conv-q">${escapeHtml(c.question)}</div><div class="dash-conv-meta"><span class="tag">${escapeHtml(c.domain)}</span><span>${conf} confidence</span><span>${ts}</span></div></div>`;
+        }).join('');
+      }
+
+      // ── Domain Explorer
+      if (domRes.status === 'fulfilled') {
+        const domains = domRes.value;
+        const grid = document.getElementById('dashDomainGrid');
+        grid.innerHTML = '';
+        if (Array.isArray(domains) && domains.length) {
+          domains.forEach(d => {
+            const name = typeof d === 'string' ? d : d.name || d;
+            const count = typeof d === 'object' && d.count ? d.count : '';
+            const dc = domainClass(name);
+            grid.innerHTML += `<div class="domain-card ${dc}" onclick="askQuick('Tell me about ${escapeHtml(name)}')"><div class="d-name">${escapeHtml(name)}</div>${count ? '<span class="d-count">' + count + ' entries</span>' : '<span class="d-count">explore</span>'}</div>`;
+          });
+        } else {
+          grid.innerHTML = '<span style="color:#484f58;font-size:.83rem">No domains available</span>';
+        }
+      }
+    }
+
     /* ═══════ PAGE INIT ═══════ */
     // Load data for pages when they become visible
     const _origShowPage = showPage;
@@ -792,6 +1136,7 @@
       if (name === 'stats') loadAllStats();
       if (name === 'forms') { loadProfiles(); loadFillHistory(); }
       if (name === 'boil') { loadBoilStatus(); loadBoilLog(); }
+      if (name === 'dashboard') loadDashboard();
     };
   </script>
 </body>

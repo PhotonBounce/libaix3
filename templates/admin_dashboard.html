@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="csrf-token" content="{{ csrf_token() }}">
 <title>libaix Admin Dashboard</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -654,7 +655,10 @@ function resultBox(cls, content) {
 }
 
 /* ── API helper ── */
+const _csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 async function api(url, opts = {}) {
+  opts.headers = opts.headers || {};
+  opts.headers['X-CSRFToken'] = _csrfToken;
   const res = await fetch(url, opts);
   return res.json();
 }
@@ -748,7 +752,7 @@ async function uploadFiles(files) {
     const fd = new FormData();
     fd.append('file', file);
     fd.append('domain', domain);
-    const res = await fetch('/admin/upload', {method:'POST', body: fd});
+    const res = await fetch('/admin/upload', {method:'POST', body: fd, headers:{'X-CSRFToken': _csrfToken}});
     const d = await res.json();
     if (d.status === 'success') {
       let details = `✅ <strong>${file.name}</strong>: <strong>${d.entries_extracted}</strong> entries extracted\n`;

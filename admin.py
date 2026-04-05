@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import time as _time
 from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
@@ -76,6 +77,25 @@ ALLOWED_EXTENSIONS = {
 }
 _URL_PATTERN = re.compile(r'https?://[^\s<>"\'`,;)\]]+', re.IGNORECASE)
 
+# ── Extra-knowledge cache (60-second TTL) ─────────────────────────────
+_EK_CACHE_TTL = 60  # seconds
+_ek_cache: dict[str, tuple[float, object]] = {}
+
+
+def _ek_cached(key: str, fn):
+    """Return cached result if fresh, otherwise call *fn* and cache it."""
+    entry = _ek_cache.get(key)
+    if entry and (_time.monotonic() - entry[0]) < _EK_CACHE_TTL:
+        return entry[1]
+    result = fn()
+    _ek_cache[key] = (_time.monotonic(), result)
+    return result
+
+
+def _ek_invalidate():
+    """Clear the extra-knowledge cache (call after crawl/upload/delete)."""
+    _ek_cache.clear()
+
 # Blocklist for SSRF protection — reject URLs targeting internal/cloud-metadata IPs
 _SSRF_BLOCKED_HOSTS = {
     "localhost", "127.0.0.1", "[::1]", "0.0.0.0",
@@ -113,9 +133,18 @@ def _is_safe_url(url: str) -> bool:
         return False
     return True
 
-# Credentials — override via env vars ADMIN_USER / ADMIN_PASS
-_admin_user = os.environ.get("ADMIN_USER", "kakababa")
-_admin_pass = os.environ.get("ADMIN_PASS", "Nepidaras25!!??")
+# Credentials — set via env vars ADMIN_USER / ADMIN_PASS
+_admin_user = os.environ.get("ADMIN_USER")
+_admin_pass = os.environ.get("ADMIN_PASS")
+if not _admin_user or not _admin_pass:
+    import warnings
+    warnings.warn(
+        "ADMIN_USER and ADMIN_PASS environment variables not set — "
+        "using insecure defaults. Set them before deploying to production.",
+        stacklevel=1,
+    )
+    _admin_user = _admin_user or "admin"
+    _admin_pass = _admin_pass or "changeme"
 ADMIN_CREDENTIALS = {
     "username": _admin_user,
     "password_hash": generate_password_hash(_admin_pass),
@@ -125,7 +154,49 @@ del _admin_pass  # scrub plaintext from process memory
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
 
+# ── CSRF enforcement on admin blueprint ───────────────────────────────
+# `WTF_CSRF_CHECK_DEFAULT` is False in app.py (public JSON APIs are exempt).
+# We manually enforce CSRF on admin POST/PUT/DELETE requests.
+@admin_bp.before_request
+def _enforce_csrf():
+    from flask import current_app
+    from flask_wtf.csrf import validate_csrf, CSRFError
+    if current_app.config.get("TESTING"):
+        return  # skip CSRF checks in test mode
+    if request.method in ("POST", "PUT", "DELETE", "PATCH"):
+        try:
+            # Check header first (AJAX), then form field
+            token = request.headers.get("X-CSRFToken") or request.form.get("csrf_token")
+            validate_csrf(token)
+        except CSRFError:
+            if request.is_json:
+                return jsonify({"error": "CSRF token missing or invalid"}), 403
+            flash("Session expired. Please try again.", "error")
+            return redirect(url_for("admin.login"))
+
+
 # ── Auth helper ───────────────────────────────────────────────────────
+
+# Brute-force protection: track failed login attempts per IP
+_LOGIN_ATTEMPTS: dict[str, list[float]] = {}  # ip -> list of timestamps
+_MAX_LOGIN_ATTEMPTS = 5  # max failures within the window
+_LOGIN_WINDOW = 300  # 5-minute sliding window (seconds)
+
+
+def _check_rate_limit(ip: str) -> bool:
+    """Return True if the IP is allowed to attempt login, False if rate-limited."""
+    now = _time.monotonic()
+    attempts = _LOGIN_ATTEMPTS.get(ip, [])
+    # Prune old attempts outside the window
+    attempts = [t for t in attempts if now - t < _LOGIN_WINDOW]
+    _LOGIN_ATTEMPTS[ip] = attempts
+    return len(attempts) < _MAX_LOGIN_ATTEMPTS
+
+
+def _record_failed_login(ip: str) -> None:
+    """Record a failed login attempt for the given IP."""
+    _LOGIN_ATTEMPTS.setdefault(ip, []).append(_time.monotonic())
+
 
 def login_required(f):
     @wraps(f)
@@ -141,15 +212,22 @@ def login_required(f):
 @admin_bp.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
+        client_ip = request.remote_addr or "unknown"
+        if not _check_rate_limit(client_ip):
+            flash("Too many failed attempts. Please try again later.", "error")
+            return render_template("admin_login.html"), 429
         username = request.form.get("username", "")
         password = request.form.get("password", "")
         if (
             username == ADMIN_CREDENTIALS["username"]
             and check_password_hash(ADMIN_CREDENTIALS["password_hash"], password)
         ):
+            # Clear failed attempts on successful login
+            _LOGIN_ATTEMPTS.pop(client_ip, None)
             session["admin_logged_in"] = True
             session["admin_user"] = username
             return redirect(url_for("admin.dashboard"))
+        _record_failed_login(client_ip)
         flash("Invalid credentials", "error")
     return render_template("admin_login.html")
 
@@ -165,14 +243,15 @@ def logout():
 @admin_bp.route("/")
 @login_required
 def dashboard():
-    extra_count = _count_extra_knowledge()
     config = load_config()
+    # Fast render — extra_count is loaded async via /api/stats from the frontend
+    file_count = sum(1 for _ in _iter_extra_files())
     return render_template(
         "admin_dashboard.html",
         knowledge_count=len(KNOWLEDGE),
-        extra_count=extra_count,
-        total_count=len(KNOWLEDGE) + extra_count,
-        domains=sorted(set(get_domains() + _get_extra_domains())),
+        extra_count=file_count,  # file count as fast estimate
+        total_count=len(KNOWLEDGE) + file_count,
+        domains=sorted(set(get_domains())),
         crawler_config=config,
     )
 
@@ -1478,6 +1557,7 @@ def _save_knowledge(entries: list[dict], source: str) -> Path:
     ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     path = EXTRA_KNOWLEDGE_DIR / f"{safe}_{ts}.json"
     path.write_text(json.dumps(entries, indent=2, ensure_ascii=False), encoding="utf-8")
+    _ek_invalidate()
     return path
 
 
@@ -1545,6 +1625,11 @@ def _default_cron_config() -> dict:
 
 
 def _get_source_breakdown() -> dict:
+    """Count extra knowledge entries by source type (cached)."""
+    return _ek_cached("source_breakdown", _get_source_breakdown_raw)
+
+
+def _get_source_breakdown_raw() -> dict:
     """Count extra knowledge entries by source type."""
     breakdown: dict[str, int] = {}
     for fp in _iter_extra_files():
@@ -1582,16 +1667,25 @@ def _get_source_breakdown() -> dict:
 
 
 def _count_extra_knowledge() -> int:
+    return _ek_cached("count", _count_extra_knowledge_raw)
+
+
+def _count_extra_knowledge_raw() -> int:
     total = 0
     for fp in _iter_extra_files():
         try:
-            total += len(json.loads(fp.read_text(encoding="utf-8")))
+            # Fast: read bytes and count Q&A entries by '"question"' keys
+            total += fp.read_bytes().count(b'"question"')
         except Exception:
             continue
     return total
 
 
 def _list_extra_files() -> list[dict]:
+    return _ek_cached("list", _list_extra_files_raw)
+
+
+def _list_extra_files_raw() -> list[dict]:
     out: list[dict] = []
     for fp in _iter_extra_files():
         try:
@@ -1673,6 +1767,10 @@ def _extract_timestamp_from_filename(name: str) -> str:
 
 
 def _get_extra_domains() -> list[str]:
+    return _ek_cached("extra_domains", _get_extra_domains_raw)
+
+
+def _get_extra_domains_raw() -> list[str]:
     domains: set[str] = set()
     for fp in _iter_extra_files():
         try:

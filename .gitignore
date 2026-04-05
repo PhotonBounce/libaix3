@@ -6,3 +6,14 @@ __pycache__/
 dist/
 build/
 *.zip
+
+# Temp test/training artifacts
+_*.py
+_*.txt
+pytest_*.txt
+test_*.txt
+!tests/test_*.py
+nn_test.txt
+run_inspection.py
+run_tests.py
+*.log

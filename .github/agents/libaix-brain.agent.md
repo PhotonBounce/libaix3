@@ -26,6 +26,14 @@ You direct these subagents:
 - **researcher** — Explores codebase (read-only)
 - **deployer** — Handles git, deployment, server
 - **ml-watcher** — Monitors ML models, knowledge, and data
+- **knowledge-architect** — Expands and curates the knowledge base
+- **ui-designer** — Frontend/UX improvements
+- **optimizer** — Performance tuning and memory optimization
+- **security-auditor** — OWASP compliance and vulnerability scanning
+- **data-engineer** — Data pipeline and crawl quality management
+- **doc-writer** — Documentation and API reference
+- **qa-lead** — Integration testing and coverage analysis
+- **game-master** — Gamification, achievements, and learning paths
 
 ## Full-Auto Mode
 
