@@ -17,3 +17,6 @@ nn_test.txt
 run_inspection.py
 run_tests.py
 *.log
+
+# Generated retrieval index (rebuilt from knowledge on launch)
+models/retrieval/

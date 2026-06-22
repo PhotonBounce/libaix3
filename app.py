@@ -201,6 +201,7 @@ knowledge_model: NeuralNetwork | None = None
 knowledge_bow: BagOfWords | None = None
 knowledge_answer_map: dict[int, str] = {}
 knowledge_domains: list[str] = []
+knowledge_retriever = None  # optional KnowledgeRetriever — preferred answer source
 
 MODEL_DIR = Path("models")
 
@@ -232,6 +233,25 @@ def _load_knowledge_model() -> bool:
     return True
 
 
+def _load_retriever() -> bool:
+    """Load the optional zero-training retrieval index if it has been built.
+
+    Independent of the neural classifier: when present it becomes the preferred
+    answer source; when absent the app falls back to the classifier unchanged.
+    """
+    global knowledge_retriever
+    retr_dir = MODEL_DIR / "retrieval"
+    if not ((retr_dir / "vectorizer.json").exists() and (retr_dir / "entries.json").exists()):
+        return False
+    try:
+        from retrieval import KnowledgeRetriever
+        knowledge_retriever = KnowledgeRetriever.load(retr_dir)
+        return True
+    except Exception:
+        knowledge_retriever = None
+        return False
+
+
 # Startup
 print("Training XOR neural network …")
 _train("xor")
@@ -242,6 +262,9 @@ if _load_knowledge_model():
           f"domains: {', '.join(knowledge_domains)}")
 else:
     print("Warning: Knowledge model not found. Run 'python train_knowledge.py' first.")
+
+if _load_retriever():
+    print(f"Retrieval engine loaded — {knowledge_retriever.size} knowledge entries")
 
 # Load project memory context
 try:
@@ -611,11 +634,24 @@ def chat():
     classifier_confidence = float(probs[top_idx])
 
     classifier_answer = knowledge_answer_map.get(top_idx, "I don't have an answer for that.")
+    strategy = "classifier"
 
-    # Start with classifier result
+    # Retrieval (preferred when available): scales and gives better answers with
+    # no training. Falls back to the classifier when no index is loaded.
+    retrieval_hits: list[dict] = []
+    if knowledge_retriever is not None:
+        try:
+            retrieval_hits = knowledge_retriever.query(effective_question, top_k=3)
+        except Exception:
+            retrieval_hits = []
+    if retrieval_hits and retrieval_hits[0]["score"] >= classifier_confidence:
+        classifier_answer = retrieval_hits[0]["answer"]
+        classifier_confidence = float(retrieval_hits[0]["score"])
+        strategy = "retrieval"
+
+    # Start with the best result so far
     answer = classifier_answer
     confidence = classifier_confidence
-    strategy = "classifier"
     reasoning_chain = []
 
     # Reasoning engine fallback: if classifier is unsure, ask the reasoning engine
@@ -631,25 +667,37 @@ def chat():
         except Exception:
             pass  # fall back to classifier result
 
-    # Find the domain for context
-    # Match back to original KNOWLEDGE entry via the answer
+    # Find the domain for context — match back via the answer text.
     domain = "general"
     for _, a, d in KNOWLEDGE:
         if a == answer:
             domain = d
             break
+    if domain == "general" and retrieval_hits:
+        for h in retrieval_hits:
+            if h["answer"] == answer:
+                domain = h["domain"]
+                break
 
-    # Get top-3 for multi-result
-    top3_idx = np.argsort(probs)[::-1][:3]
+    # Get top-3 for multi-result (from retrieval when available, else classifier)
     suggestions = []
-    for idx in top3_idx:
-        idx = int(idx)
-        a = knowledge_answer_map.get(idx, "")
-        if a:
-            suggestions.append({
-                "answer": a,
-                "confidence": round(float(probs[idx]), 4),
-            })
+    if retrieval_hits:
+        for h in retrieval_hits:
+            if h["answer"]:
+                suggestions.append({
+                    "answer": h["answer"],
+                    "confidence": round(float(h["score"]), 4),
+                })
+    else:
+        top3_idx = np.argsort(probs)[::-1][:3]
+        for idx in top3_idx:
+            idx = int(idx)
+            a = knowledge_answer_map.get(idx, "")
+            if a:
+                suggestions.append({
+                    "answer": a,
+                    "confidence": round(float(probs[idx]), 4),
+                })
 
     # Low confidence threshold
     if confidence < 0.15:

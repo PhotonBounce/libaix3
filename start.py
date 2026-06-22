@@ -81,6 +81,26 @@ def _train_model() -> None:
     print("Knowledge model trained ✓\n")
 
 
+def _ensure_retrieval_index() -> None:
+    """Build the zero-training retrieval index if missing (best effort).
+
+    This is the preferred answer engine: building it just vectorizes the known
+    questions (seconds), so it is far cheaper than neural training and gives
+    better answers. Failures here never block launch.
+    """
+    idx_dir = MODEL_DIR / "retrieval"
+    if (idx_dir / "vectorizer.json").exists() and (idx_dir / "entries.json").exists():
+        return
+    try:
+        from retrieval import KnowledgeRetriever
+        print("Building retrieval index (one-time)…")
+        retriever = KnowledgeRetriever.build_from_knowledge()
+        retriever.save(idx_dir)
+        print(f"Retrieval index ready ✓ ({retriever.size} entries)\n")
+    except Exception as exc:  # noqa: BLE001 — never block startup on the index
+        print(f"(Skipping retrieval index for now: {exc})\n")
+
+
 # ── Step 3: Launch ───────────────────────────────────────────────────
 
 def _resolve_port(host: str, requested: int, strict: bool = False) -> int:
@@ -147,6 +167,9 @@ def main() -> None:
     elif not _model_exists():
         print("Warning: No trained model found. Chat will be unavailable.")
         print("  Run: python start.py --retrain\n")
+
+    # Build the zero-training retrieval index (preferred answer engine) if needed
+    _ensure_retrieval_index()
 
     # Start the app
     display_host = "localhost" if args.host in ("0.0.0.0", "::") else args.host
