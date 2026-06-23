@@ -252,6 +252,30 @@ def _load_retriever() -> bool:
         return False
 
 
+def rebuild_retriever() -> bool:
+    """Rebuild the retrieval index from current knowledge and swap it in live.
+
+    Lets newly-taught or crawled knowledge become answerable without a restart.
+    The (~seconds) build runs outside the lock; only the pointer swap is locked,
+    so queries are never blocked. Best-effort — failures leave the existing
+    retriever untouched.
+    """
+    global knowledge_retriever
+    try:
+        from retrieval import KnowledgeRetriever
+        retriever = KnowledgeRetriever.build_from_knowledge()
+    except Exception as exc:
+        print(f"Retriever rebuild failed: {type(exc).__name__}: {exc}")
+        return False
+    with _knowledge_lock:
+        knowledge_retriever = retriever
+    try:
+        retriever.save(MODEL_DIR / "retrieval")
+    except Exception:
+        pass
+    return True
+
+
 # Startup
 print("Training XOR neural network …")
 _train("xor")
@@ -523,7 +547,8 @@ def _background_retrain() -> None:
                 augment=True, verbose=False,
             )
             _load_knowledge_model()
-            print("Background retrain complete — knowledge model reloaded.")
+            rebuild_retriever()
+            print("Background retrain complete — knowledge model + retriever reloaded.")
         except Exception as exc:
             print(f"Background retrain failed: {type(exc).__name__}: {exc}")
 
