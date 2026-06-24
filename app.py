@@ -555,6 +555,36 @@ def _background_retrain() -> None:
     t = threading.Thread(target=_do_retrain, daemon=True)
     t.start()
 
+
+def _coach_compose_enabled() -> bool:
+    """True when persona-framed coaching composition is switched on."""
+    return os.environ.get("COACH_COMPOSE", "").strip().lower() in ("1", "true", "yes", "on")
+
+
+def _coach_wrap(question: str, answer: str, hits: list, confidence: float) -> str:
+    """Apply persona coaching composition on read (gated, best-effort).
+
+    Off by default (``COACH_COMPOSE``) and skipped for low-confidence/fallback
+    answers, so production behaviour is unchanged until explicitly enabled.
+    """
+    if not _coach_compose_enabled() or confidence < 0.15:
+        return answer
+    try:
+        import coach
+        import trade_pack
+
+        composed = coach.compose_coaching_answer(
+            question,
+            hits,
+            trade_pack.persona_for(),
+            base_answer=answer,
+            disclaimers=trade_pack.disclaimers_for(),
+        )
+        return composed or answer
+    except Exception:
+        return answer
+
+
 @app.route("/chat", methods=["POST"])
 def chat():
     """Answer a user question using the knowledge classifier.
@@ -636,7 +666,7 @@ def chat():
     cached = lookup_cached_response(question)
     if cached and cached.get("confidence", 0) >= 0.15:
         return jsonify({
-            "answer": cached["answer"],
+            "answer": _coach_wrap(question, cached["answer"], [], cached.get("confidence", 0)),
             "confidence": cached["confidence"],
             "domain": cached.get("domain", "general"),
             "suggestions": [],
@@ -739,11 +769,11 @@ def chat():
         domain = "general"
         strategy = "fallback"
 
-    # Cache the response for future lookups
+    # Cache the response for future lookups (raw answer — composition is on read)
     cache_response(question, answer, confidence, domain)
 
     response = {
-        "answer": answer,
+        "answer": _coach_wrap(question, answer, retrieval_hits, confidence),
         "confidence": round(confidence, 4),
         "domain": domain,
         "suggestions": suggestions,
