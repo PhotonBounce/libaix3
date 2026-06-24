@@ -150,3 +150,54 @@ class TestPackAwareClassify:
 
     def test_unknown_text_returns_general(self):
         assert classify_domain("The quick brown fox jumps over the lazy dog") == "general"
+
+
+# ── Trade-aware crawl / forum defaults ────────────────────────────────────
+
+class TestTradeAwareCrawlDefaults:
+    def test_crawler_default_topics_are_networking_by_default(self):
+        import crawler
+
+        cfg = crawler._default_config()
+        names = {t["name"] for t in cfg["topics"]}
+        assert "Network Protocols" in names
+        # Must equal the networking pack's crawl topics.
+        assert cfg["topics"] == trade_pack.crawl_topics_for("networking")
+
+    def test_crawler_default_topics_follow_active_trade(self, monkeypatch):
+        import crawler
+
+        monkeypatch.setenv("LIBAIX_ACTIVE_TRADE", "plumbing")
+        trade_pack.clear_cache()
+        cfg = crawler._default_config()
+        assert cfg["topics"] == trade_pack.crawl_topics_for("plumbing")
+        assert any("Plumbing" in t["name"] for t in cfg["topics"])
+
+    def test_forum_default_topics_networking_unchanged(self):
+        import forum_crawler
+
+        cfg = forum_crawler._default_forum_config()
+        names = [t["name"] for t in cfg["topics"]]
+        assert names == ["Wi-Fi Security", "Network Troubleshooting"]
+        for t in cfg["topics"]:
+            assert t["sources"] == ["stackexchange", "reddit", "hackernews", "devto"]
+
+    def test_forum_topics_derived_for_trade_without_explicit_forum_topics(self, monkeypatch):
+        import forum_crawler
+
+        monkeypatch.setenv("LIBAIX_ACTIVE_TRADE", "auto_mechanic")
+        trade_pack.clear_cache()
+        cfg = forum_crawler._default_forum_config()
+        # auto_mechanic declares no forum_topics → derived from its crawl topics.
+        crawl_names = [t["name"] for t in trade_pack.crawl_topics_for("auto_mechanic")]
+        assert [t["name"] for t in cfg["topics"]] == crawl_names
+        assert all(set(t) >= {"name", "keywords", "sources", "max_per_source"} for t in cfg["topics"])
+
+
+# ── Trade-aware fallback message ──────────────────────────────────────────
+
+class TestTradeFallback:
+    def test_fallback_is_trade_specific(self):
+        assert "networking" in trade_pack.fallback_for("networking").lower()
+        assert "plumbing" in trade_pack.fallback_for("plumbing").lower()
+        assert "licensed professional" in trade_pack.fallback_for("plumbing").lower()

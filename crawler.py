@@ -158,35 +158,52 @@ def save_config(config: dict) -> None:
 
 def _default_config() -> dict:
     return {
-        "topics": [
-            {
-                "name": "Wi-Fi Security",
-                "keywords": ["WPA3", "802.1X authentication", "wireless security"],
-                "enabled": True,
-                "max_articles": 8,
-            },
-            {
-                "name": "Network Protocols",
-                "keywords": ["TCP/IP protocol", "routing protocol", "network protocol"],
-                "enabled": True,
-                "max_articles": 8,
-            },
-            {
-                "name": "Corporate Network Security",
-                "keywords": ["enterprise security", "zero trust architecture", "NAC"],
-                "enabled": True,
-                "max_articles": 8,
-            },
-            {
-                "name": "Network Troubleshooting",
-                "keywords": ["Wi-Fi troubleshooting", "network diagnostics"],
-                "enabled": True,
-                "max_articles": 5,
-            },
-        ],
+        "topics": _default_topics(),
         "last_crawl": None,
         "crawl_interval_hours": 2,
     }
+
+
+def _default_topics() -> list[dict]:
+    """Crawl topics for the active trade pack, or the built-in networking set.
+
+    A fresh crawler config is seeded from whatever trade is active, so pointing
+    libaix at a new trade automatically crawls that trade's topics.
+    """
+    try:
+        import trade_pack
+
+        topics = trade_pack.crawl_topics_for()
+        if topics:
+            return topics
+    except Exception:
+        pass
+    return [
+        {
+            "name": "Wi-Fi Security",
+            "keywords": ["WPA3", "802.1X authentication", "wireless security"],
+            "enabled": True,
+            "max_articles": 8,
+        },
+        {
+            "name": "Network Protocols",
+            "keywords": ["TCP/IP protocol", "routing protocol", "network protocol"],
+            "enabled": True,
+            "max_articles": 8,
+        },
+        {
+            "name": "Corporate Network Security",
+            "keywords": ["enterprise security", "zero trust architecture", "NAC"],
+            "enabled": True,
+            "max_articles": 8,
+        },
+        {
+            "name": "Network Troubleshooting",
+            "keywords": ["Wi-Fi troubleshooting", "network diagnostics"],
+            "enabled": True,
+            "max_articles": 5,
+        },
+    ]
 
 
 # ── Persistence ───────────────────────────────────────────────────────

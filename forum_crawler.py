@@ -524,27 +524,58 @@ def save_forum_config(config: dict) -> None:
     )
 
 
+_FORUM_SOURCES = ["stackexchange", "reddit", "hackernews", "devto"]
+
+
 def _default_forum_config() -> dict:
     return {
-        "topics": [
-            {
-                "name": "Wi-Fi Security",
-                "keywords": ["WPA3", "802.1X", "wireless security"],
-                "enabled": True,
-                "max_per_source": 10,
-                "sources": ["stackexchange", "reddit", "hackernews", "devto"],
-            },
-            {
-                "name": "Network Troubleshooting",
-                "keywords": ["packet loss", "latency", "DNS resolution"],
-                "enabled": True,
-                "max_per_source": 10,
-                "sources": ["stackexchange", "reddit", "hackernews", "devto"],
-            },
-        ],
+        "topics": _default_forum_topics(),
         "last_crawl": None,
         "stats": {},
     }
+
+
+def _default_forum_topics() -> list[dict]:
+    """Forum topics for the active trade pack, or the built-in networking set.
+
+    A pack may declare explicit ``forum_topics``; otherwise they are derived
+    from its ``crawl_topics`` (so any trade gets sensible forum coverage).
+    """
+    try:
+        import trade_pack
+
+        topics = trade_pack.forum_topics_for()
+        if not topics:
+            topics = [
+                {
+                    "name": t.get("name", ""),
+                    "keywords": list(t.get("keywords", [])),
+                    "enabled": t.get("enabled", True),
+                    "max_per_source": 10,
+                    "sources": list(_FORUM_SOURCES),
+                }
+                for t in trade_pack.crawl_topics_for()
+            ]
+        if topics:
+            return topics
+    except Exception:
+        pass
+    return [
+        {
+            "name": "Wi-Fi Security",
+            "keywords": ["WPA3", "802.1X", "wireless security"],
+            "enabled": True,
+            "max_per_source": 10,
+            "sources": list(_FORUM_SOURCES),
+        },
+        {
+            "name": "Network Troubleshooting",
+            "keywords": ["packet loss", "latency", "DNS resolution"],
+            "enabled": True,
+            "max_per_source": 10,
+            "sources": list(_FORUM_SOURCES),
+        },
+    ]
 
 
 def save_forum_knowledge(entries: list[dict], topic_name: str) -> Path | None:

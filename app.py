@@ -726,11 +726,16 @@ def chat():
 
     # Low confidence threshold
     if confidence < 0.15:
-        answer = (
-            "I'm not sure about that. Try asking about networking, internet, "
-            "intranet, security, programming, or algorithms. You can also say "
-            "'research <topic>' to teach me something new!"
-        )
+        try:
+            import trade_pack
+
+            answer = trade_pack.fallback_for()
+        except Exception:
+            answer = (
+                "I'm not sure about that. Try asking about networking, internet, "
+                "intranet, security, programming, or algorithms. You can also say "
+                "'research <topic>' to teach me something new!"
+            )
         domain = "general"
         strategy = "fallback"
 

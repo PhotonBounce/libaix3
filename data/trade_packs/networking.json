@@ -79,6 +79,22 @@
       "max_articles": 5
     }
   ],
+  "forum_topics": [
+    {
+      "name": "Wi-Fi Security",
+      "keywords": ["WPA3", "802.1X", "wireless security"],
+      "enabled": true,
+      "max_per_source": 10,
+      "sources": ["stackexchange", "reddit", "hackernews", "devto"]
+    },
+    {
+      "name": "Network Troubleshooting",
+      "keywords": ["packet loss", "latency", "DNS resolution"],
+      "enabled": true,
+      "max_per_source": 10,
+      "sources": ["stackexchange", "reddit", "hackernews", "devto"]
+    }
+  ],
   "seed_knowledge": [],
   "fallback": "I'm not sure about that. Try asking about networking, internet, intranet, security, programming, or algorithms. You can also say 'research <topic>' to teach me something new!",
   "disclaimers": [],
