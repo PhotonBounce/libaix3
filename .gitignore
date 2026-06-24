@@ -20,3 +20,9 @@ run_tests.py
 
 # Generated retrieval index (rebuilt from knowledge on launch)
 models/retrieval/
+
+# Runtime data — caches, logs, memory, model backups (regenerated at runtime).
+# Knowledge corpus (data/extra_knowledge) stays tracked until cloud storage exists.
+data/memory/
+data/active_trade.json
+models/backups/

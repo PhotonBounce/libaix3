@@ -153,12 +153,36 @@ def _strip_tags(html: str) -> str:
 
 # ── Domain classification ─────────────────────────────────────────────
 
-def classify_domain(text: str) -> str:
-    """Classify text into a knowledge domain via keyword scoring."""
+def _active_domain_keywords() -> dict[str, list[str]]:
+    """Domain keywords for the active trade pack, falling back to networking.
+
+    Lets ``classify_domain`` work for any trade while keeping ``DOMAIN_KEYWORDS``
+    (networking) as the hard fallback when no pack is available — so existing
+    networking behaviour and tests are unchanged.
+    """
+    try:
+        import trade_pack
+
+        keywords = trade_pack.domain_keywords_for()
+        if keywords:
+            return keywords
+    except Exception:
+        pass
+    return DOMAIN_KEYWORDS
+
+
+def classify_domain(text: str, keywords: dict[str, list[str]] | None = None) -> str:
+    """Classify text into a knowledge domain via keyword scoring.
+
+    *keywords* defaults to the active trade pack's domain keywords (or the
+    built-in networking ``DOMAIN_KEYWORDS`` when no pack is loaded).
+    """
+    if keywords is None:
+        keywords = _active_domain_keywords()
     text_lower = text.lower()
     scores: dict[str, int] = {}
-    for domain, keywords in DOMAIN_KEYWORDS.items():
-        score = sum(1 for kw in keywords if kw in text_lower)
+    for domain, kw_list in keywords.items():
+        score = sum(1 for kw in kw_list if kw in text_lower)
         if score > 0:
             scores[domain] = score
     if not scores:
