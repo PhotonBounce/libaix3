@@ -12,6 +12,11 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     """All runtime configuration."""
 
+    # ── Free Mode ───────────────────────────────────────────────────────
+    FREE_MODE: bool = os.environ.get("FREE_MODE", "true").lower() in ("true", "1", "yes")
+    DEMO_USER_EMAIL: str = os.environ.get("DEMO_USER_EMAIL", "demo@opsbrief.local")
+    DEMO_USER_NAME: str = os.environ.get("DEMO_USER_NAME", "Demo User")
+
     # ── Database ──────────────────────────────────────────────────────
     DATABASE_URL: str = os.environ.get(
         "DATABASE_URL",
@@ -32,9 +37,9 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60  # 1 hour
 
-    # ── OpenAI ──────────────────────────────────────────────────────────
-    OPENAI_API_KEY: str | None = os.environ.get("OPENAI_API_KEY")
-    OPENAI_MODEL: str = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+    # ── Anthropic Claude ────────────────────────────────────────────────
+    ANTHROPIC_API_KEY: str | None = os.environ.get("ANTHROPIC_API_KEY")
+    ANTHROPIC_MODEL: str = os.environ.get("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
 
     # ── Data sources ────────────────────────────────────────────────────
     NVD_API_KEY: str | None = os.environ.get("NVD_API_KEY")

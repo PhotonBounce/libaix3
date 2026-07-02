@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0f">
+<meta name="description" content="Daily intelligence briefings for IT professionals. Stay ahead of vulnerabilities, patches, and threats.">
+<meta property="og:title" content="OpsBrief - IT Security Intelligence">
+<meta property="og:description" content="Daily intelligence briefings for IT professionals">
+<meta property="og:image" content="https://photon-bounce.com/opsbrief/og-image.png">
+<link rel="icon" type="image/svg+xml" href="/opsbrief/favicon.svg">
+<link rel="apple-touch-icon" href="/opsbrief/icon-192.png">
+<link rel="manifest" href="/opsbrief/manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<title>OpsBrief - IT Security Intelligence</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:#0a0a0f;color:#e2e8f0;line-height:1.6}
+.container{max-width:1200px;margin:0 auto;padding:0 24px}
+.hero{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:80px 24px;background:radial-gradient(ellipse at 50% 0%,rgba(30,41,59,0.5) 0%,transparent 70%)}
+.hero h1{font-size:clamp(2.5rem,6vw,4.5rem);font-weight:800;background:linear-gradient(135deg,#0ea5e9,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:1rem}
+.hero p{font-size:clamp(1.1rem,2.5vw,1.5rem);color:#94a3b8;max-width:600px;margin:0 auto 2rem}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:14px 32px;border-radius:12px;font-weight:600;font-size:1rem;text-decoration:none;transition:all 0.2s;border:none;cursor:pointer}
+.btn-primary{background:#0ea5e9;color:#fff}
+.btn-primary:hover{background:#0284c7;transform:translateY(-2px)}
+.btn-secondary{background:rgba(255,255,255,0.05);color:#e2e8f0;border:1px solid rgba(255,255,255,0.1)}
+.btn-secondary:hover{background:rgba(255,255,255,0.1)}
+.features{padding:80px 24px}
+.features h2{text-align:center;font-size:2rem;margin-bottom:3rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px}
+.card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:32px;transition:all 0.2s}
+.card:hover{border-color:rgba(255,255,255,0.15);transform:translateY(-4px)}
+.card-icon{font-size:2rem;margin-bottom:16px}
+.card h3{font-size:1.25rem;margin-bottom:8px}
+.card p{color:#94a3b8;font-size:0.95rem}
+.pricing{padding:80px 24px;background:rgba(255,255,255,0.02)}
+.pricing h2{text-align:center;font-size:2rem;margin-bottom:3rem}
+.price-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px;max-width:900px;margin:0 auto}
+.price-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:32px;text-align:center}
+.price-card.popular{border-color:#0ea5e9;position:relative}
+.price-card.popular::before{content:"Most Popular";position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:#0ea5e9;color:#fff;padding:4px 16px;border-radius:20px;font-size:0.75rem;font-weight:600}
+.price-card h3{font-size:1.25rem;margin-bottom:8px}
+.price-card .price{font-size:2.5rem;font-weight:800;margin-bottom:16px}
+.price-card .price span{font-size:0.875rem;color:#94a3b8;font-weight:400}
+.price-card ul{list-style:none;text-align:left;margin:24px 0}
+.price-card ul li{padding:8px 0;color:#94a3b8;border-bottom:1px solid rgba(255,255,255,0.05)}
+.price-card ul li:last-child{border-bottom:none}
+.footer{padding:40px 24px;text-align:center;color:#64748b;border-top:1px solid rgba(255,255,255,0.05)}
+.footer a{color:#94a3b8;text-decoration:none;margin:0 12px}
+.footer a:hover{color:#e2e8f0}
+.badge{display:inline-block;padding:4px 12px;border-radius:20px;background:rgba(255,255,255,0.05);font-size:0.75rem;color:#94a3b8;margin-bottom:16px}
+@media(max-width:640px){.hero{padding:60px 16px}.features{padding:60px 16px}.pricing{padding:60px 16px}}
+</style>
+</head>
+<body>
+<section class="hero">
+<div class="container">
+<div class="badge">📡 Now in Closed Testing</div>
+<h1>OpsBrief</h1>
+<p>Daily intelligence briefings for IT professionals. Stay ahead of vulnerabilities, patches, and threats — curated for your tech stack.</p>
+<div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
+<a href="/opsbrief/app/" class="btn btn-primary">Launch App →</a>
+<a href="https://github.com/PhotonBounce/libaix3" class="btn btn-secondary">View on GitHub</a>
+</div>
+</div>
+</section>
+<section class="features">
+<div class="container">
+<h2>What You Get</h2>
+<div class="grid">
+<div class="card"><div class="card-icon">📰</div><h3>Daily Briefings</h3><p>Fresh security intel every morning, filtered by your tech stack and severity preferences.</p></div>
+<div class="card"><div class="card-icon">🤖</div><h3>AI Chat</h3><p>Ask questions about CVEs, configurations, and vulnerabilities. Get expert-level answers instantly.</p></div>
+<div class="card"><div class="card-icon">🔖</div><h3>Save Intel</h3><p>Bookmark critical items for later. Build your personal knowledge base.</p></div>
+<div class="card"><div class="card-icon">📊</div><h3>Admin Dashboard</h3><p>Track usage, manage intel, and monitor system health from a single panel.</p></div>
+<div class="card"><div class="card-icon">🔔</div><h3>Smart Notifications</h3><p>Get alerted when critical vulnerabilities hit your stack. No noise, only signal.</p></div>
+<div class="card"><div class="card-icon">📱</div><h3>PWA + Android</h3><p>Install as a web app on any device. Native Android app coming to Google Play.</p></div>
+</div>
+</div>
+</section>
+<section class="pricing">
+<div class="container">
+<h2>Simple Pricing</h2>
+<div class="price-grid">
+<div class="price-card">
+<h3>Free</h3>
+<div class="price">$0<span>/month</span></div>
+<ul>
+<li>✓ Daily briefing</li>
+<li>✓ 5 chat messages/day</li>
+<li>✓ 50 saved intel items</li>
+<li>✓ Email digest</li>
+</ul>
+<a href="/opsbrief/app/" class="btn btn-secondary" style="width:100%;justify-content:center">Get Started</a>
+</div>
+<div class="price-card popular">
+<h3>Pro</h3>
+<div class="price">$9.99<span>/month</span></div>
+<ul>
+<li>✓ Unlimited chat</li>
+<li>✓ Unlimited saved intel</li>
+<li>✓ Priority briefing</li>
+<li>✓ Advanced filters</li>
+<li>✓ Slack/Teams integration</li>
+</ul>
+<a href="/opsbrief/app/" class="btn btn-primary" style="width:100%;justify-content:center">Start Free Trial</a>
+</div>
+<div class="price-card">
+<h3>Team</h3>
+<div class="price">$49<span>/month</div>
+<ul>
+<li>✓ Everything in Pro</li>
+<li>✓ Up to 10 members</li>
+<li>✓ Shared intel library</li>
+<li>✓ Admin controls</li>
+<li>✓ Custom integrations</li>
+</ul>
+<a href="/opsbrief/app/" class="btn btn-secondary" style="width:100%;justify-content:center">Contact Sales</a>
+</div>
+</div>
+</div>
+</section>
+<footer class="footer">
+<div class="container">
+<p>© 2026 OpsBrief. All rights reserved.</p>
+<p style="margin-top:12px">
+<a href="/opsbrief/privacy-policy.html">Privacy Policy</a>
+<a href="/opsbrief/terms-of-service.html">Terms of Service</a>
+<a href="https://github.com/PhotonBounce/libaix3">GitHub</a>
+</p>
+</div>
+</footer>
+</body>
+</html>

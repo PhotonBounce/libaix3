@@ -318,7 +318,7 @@ window.addEventListener('online', () => { if (typeof showToast === 'function') s
 <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <!-- ==================== LOGIN SCREEN ==================== -->
-<section id="login-screen" class="screen">
+<section id="login-screen" class="screen active">
   <div class="login-logo">
     <div class="logo-icon" aria-hidden="true">📡</div>
     <h1>OpsBrief</h1>
@@ -344,7 +344,7 @@ window.addEventListener('online', () => { if (typeof showToast === 'function') s
     <div class="form-group">
       <div style="display:flex;align-items:flex-start;gap:10px;">
         <input type="checkbox" id="signup-tos" style="width:auto;padding:0;height:auto;margin-top:2px;" required aria-required="true">
-        <label for="signup-tos" style="text-transform:none;font-weight:400;font-size:14px;cursor:pointer;">I agree to the <a href="https://photon-bounce.com/terms-of-service/" target="_blank" rel="noopener noreferrer" style="color:var(--accent);" onclick="event.stopPropagation()">Terms of Service</a> and <a href="https://photon-bounce.com/privacy-policy/" target="_blank" rel="noopener noreferrer" style="color:var(--accent);" onclick="event.stopPropagation()">Privacy Policy</a>, and I understand that my chat messages may be processed by Claude (Anthropic) for AI responses.</label>
+        <label for="signup-tos" style="text-transform:none;font-weight:400;font-size:14px;cursor:pointer;">I agree to the <a href="https://photon-bounce.com/terms-of-service/" target="_blank" rel="noopener noreferrer" style="color:var(--accent);" onclick="event.stopPropagation()">Terms of Service</a> and <a href="https://photon-bounce.com/privacy-policy/" target="_blank" rel="noopener noreferrer" style="color:var(--accent);" onclick="event.stopPropagation()">Privacy Policy</a>, and I understand that my chat messages may be processed by OpenAI for AI responses.</label>
       </div>
       <span class="field-error" aria-live="polite" id="signup-tos-error">You must agree to the Terms of Service and Privacy Policy</span>
     </div>
@@ -445,8 +445,11 @@ window.addEventListener('online', () => { if (typeof showToast === 'function') s
     <h3>Support</h3>
     <div class="settings-row" onclick="openExternal('https://photon-bounce.com/privacy-policy/')" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openExternal('https://photon-bounce.com/privacy-policy/')}" style="cursor:pointer" role="link"><span class="label">Privacy Policy</span><span class="value">→</span></div>
     <div class="settings-row" onclick="openExternal('https://photon-bounce.com/terms-of-service/')" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openExternal('https://photon-bounce.com/terms-of-service/')}" style="cursor:pointer" role="link"><span class="label">Terms of Service</span><span class="value">→</span></div>
+    <div class="settings-row" style="color:var(--danger); cursor:pointer" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();logout()}" onclick="logout()" role="button"><span class="label">Sign Out</span><span class="value">→</span></div>
   </div>
-  <!-- Sign Out and Delete Account removed in free mode -->
+  <div class="settings-group" style="margin-top: 24px;">
+    <button type="button" class="btn btn-danger" onclick="handleDeleteAccount()">Delete Account</button>
+  </div>
 </section>
 
 <!-- Bottom Navigation -->
@@ -473,8 +476,6 @@ const API_BASE = (window.Capacitor && window.Capacitor.isNativePlatform())
   ? 'https://api.opsbrief.com'  // production API
   : (window.location.hostname === 'localhost' ? 'http://localhost:8000' : '');
 
-const FREE_MODE = true; // Set to false to re-enable authentication wall
-
 // ==================== STATE ====================
 let token = null;
 try { token = localStorage.getItem('opsbrief_token'); } catch (e) {}
@@ -486,17 +487,6 @@ let isOnboardingSubmitting = false;
 let briefingController = null;
 let savedController = null;
 let intendedScreen = null;
-
-// Demo user for free mode
-const DEMO_USER = {
-  id: '00000000-0000-0000-0000-000000000000',
-  email: 'demo@opsbrief.local',
-  name: 'Demo User',
-  is_pro: false,
-  daily_briefings_used: 0,
-  daily_chats_used: 0,
-  preferences_json: '{}' // empty so onboarding shows first
-};
 
 // ==================== UTILS ====================
 function showToast(msg, undoId) {
@@ -622,17 +612,15 @@ async function api(method, path, body, signal) {
   if (signal) {
     signal.addEventListener('abort', () => { clearTimeout(timeoutId); controller.abort(); });
   }
-  if (!FREE_MODE) {
-    let currentToken = null;
-    try { currentToken = localStorage.getItem('opsbrief_token'); } catch (e) {}
-    if (currentToken) opts.headers['Authorization'] = 'Bearer ' + currentToken;
-  }
+  let currentToken = null;
+  try { currentToken = localStorage.getItem('opsbrief_token'); } catch (e) {}
+  if (currentToken) opts.headers['Authorization'] = 'Bearer ' + currentToken;
   if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
   try {
     const r = await fetch(API_BASE + path, opts);
     clearTimeout(timeoutId);
-    if (r.status === 401) { if (!FREE_MODE) { logout(); showToast('Session expired. Please sign in again.'); } return null; }
-    if (r.status === 429) { showToast(FREE_MODE ? 'Rate limit reached. This is a demo.' : 'Daily limit reached. Upgrade to Pro.'); return null; }
+    if (r.status === 401) { logout(); showToast('Session expired. Please sign in again.'); return null; }
+    if (r.status === 429) { showToast('Daily limit reached. Upgrade to Pro.'); return null; }
     if (!r.ok) {
       const ct = r.headers.get('content-type') || '';
       const d = ct.includes('application/json') ? await r.json() : { detail: await r.text() };
@@ -672,7 +660,7 @@ async function handleLogin() {
   try {
     const r = await fetch(API_BASE + '/api/auth/token', { ...opts, signal: controller.signal });
     clearTimeout(timeoutId);
-    if (r.status === 429) { showToast(FREE_MODE ? 'Rate limit reached. This is a demo.' : 'Daily limit reached. Upgrade to Pro.'); isLoginSubmitting = false; setBtnLoading(document.getElementById('login-btn'), false); return; }
+    if (r.status === 429) { showToast('Daily limit reached. Upgrade to Pro.'); isLoginSubmitting = false; setBtnLoading(document.getElementById('login-btn'), false); return; }
     if (!r.ok) {
       const ct = r.headers.get('content-type') || '';
       const d = ct.includes('application/json') ? await r.json() : { detail: await r.text() };
@@ -720,27 +708,6 @@ async function handleSignup() {
 }
 
 async function loadUser() {
-  if (FREE_MODE) {
-    user = DEMO_USER;
-    if (!user.preferences_json || user.preferences_json === '{}') {
-      showScreen('onboarding-screen');
-    } else {
-      const target = intendedScreen || 'briefing-screen';
-      showScreen(target);
-      if (target === 'briefing-screen') loadBriefing();
-      loadSaved();
-    }
-    document.getElementById('bottom-nav').style.display = 'flex';
-    document.getElementById('settings-email').textContent = user.email;
-    if (user.is_pro) {
-      document.getElementById('settings-plan').innerHTML = '<span class="pro-badge">PRO</span>';
-      document.getElementById('user-pro-badge').innerHTML = '<span class="pro-badge">PRO</span>';
-    } else {
-      document.getElementById('settings-plan').textContent = 'Free';
-      document.getElementById('user-pro-badge').innerHTML = '';
-    }
-    return;
-  }
   const data = await api('GET', '/api/auth/me');
   if (!data) { logout(); return; }
   user = data;
@@ -761,10 +728,6 @@ async function loadUser() {
 }
 
 function logout() {
-  if (FREE_MODE) {
-    showToast('Free mode — no sign out needed');
-    return;
-  }
   token = null; user = null;
   try { localStorage.removeItem('opsbrief_token'); } catch (e) {}
   document.getElementById('settings-plan').textContent = 'Free';
@@ -774,10 +737,6 @@ function logout() {
 }
 
 async function handleDeleteAccount() {
-  if (FREE_MODE) {
-    showToast('Free mode — account deletion is disabled');
-    return;
-  }
   const confirmed = confirm('WARNING: This action is permanent and cannot be undone. All your data will be permanently deleted. Are you sure you want to delete your account?');
   if (!confirmed) return;
   const ok = await api('DELETE', '/api/auth/me');
@@ -1145,14 +1104,7 @@ if (window.location.hash) {
   const hash = window.location.hash.slice(1);
   if (hash && document.getElementById(hash)) intendedScreen = hash;
 }
-if (FREE_MODE) {
-  // In free mode, skip auth entirely and go straight to the app
-  loadUser();
-} else if (token) {
-  loadUser();
-} else {
-  showScreen('login-screen');
-}
+if (token) { loadUser(); } else { showScreen('login-screen'); }
 </script>
 </body>
 </html>

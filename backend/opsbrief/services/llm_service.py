@@ -1,4 +1,4 @@
-"""OpsBrief — Stripped LLM service. No multi-tenant. No billing. Just chat."""
+"""OpsBrief — LLM service using Anthropic Claude."""
 
 from __future__ import annotations
 
@@ -7,14 +7,13 @@ import logging
 import os
 from typing import Any
 
-import openai
+from anthropic import AsyncAnthropic
 
 from ..config import settings
 
 logger = logging.getLogger(__name__)
 
-client = openai.AsyncOpenAI(api_key=settings.OPENAI_API_KEY) if settings.OPENAI_API_KEY else None
-
+client = AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY) if settings.ANTHROPIC_API_KEY else None
 
 _MAX_PROMPT_INPUT_LEN = 4000
 
@@ -32,9 +31,9 @@ def _sanitize_for_llm(text: str) -> str:
 
 
 async def query_with_context(message: str, user_id: str, system_prompt: str | None = None) -> str:
-    """Send a message to OpenAI and return the response."""
+    """Send a message to Claude and return the response."""
     if not client:
-        return "AI is not configured. Please set OPENAI_API_KEY in your environment."
+        return "AI is not configured. Please set ANTHROPIC_API_KEY in your environment."
 
     if not system_prompt:
         system_prompt = (
@@ -49,19 +48,22 @@ async def query_with_context(message: str, user_id: str, system_prompt: str | No
     delimited_message = f"<<<USER_INPUT>>>{safe_message}<<<END_USER_INPUT>>>"
 
     try:
-        resp = await client.chat.completions.create(
-            model=settings.OPENAI_MODEL,
+        resp = await client.messages.create(
+            model=settings.ANTHROPIC_MODEL,
+            max_tokens=1024,
+            temperature=0.7,
+            system=system_prompt,
             messages=[
-                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": delimited_message},
             ],
-            temperature=0.7,
-            max_tokens=1024,
         )
-        content = resp.choices[0].message.content or ""
+        content = ""
+        for block in resp.content:
+            if getattr(block, "type", None) == "text":
+                content += block.text
         return content.strip()
     except Exception as e:
-        logger.error(f"OpenAI call failed: {e}")
+        logger.error(f"Claude call failed: {e}")
         return "Sorry, the AI service is temporarily unavailable. Please try again later."
 
 
@@ -89,13 +91,16 @@ async def summarize_intel_items(items: list[dict]) -> list[dict]:
     )
 
     try:
-        resp = await client.chat.completions.create(
-            model=settings.OPENAI_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
+        resp = await client.messages.create(
+            model=settings.ANTHROPIC_MODEL,
             max_tokens=2048,
+            temperature=0.3,
+            messages=[{"role": "user", "content": prompt}],
         )
-        content = resp.choices[0].message.content or "[]"
+        content = ""
+        for block in resp.content:
+            if getattr(block, "type", None) == "text":
+                content += block.text
         # Clean up markdown fences if present
         content = content.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
         summaries = json.loads(content)

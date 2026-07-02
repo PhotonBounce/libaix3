@@ -63,9 +63,37 @@ MAX_REFRESH_COUNT = 100
 # Dummy hash to prevent timing-based user enumeration on login
 _DUMMY_HASH = bcrypt.hashpw(b"dummy", bcrypt.gensalt())
 
+# ── Free-mode demo user helpers ───────────────────────────────────────
+
+DEMO_USER_ID = "00000000-0000-0000-0000-000000000000"
+
+
+def get_or_create_demo_user(db: Session) -> User:
+    """Return the synthetic demo user, creating it if necessary."""
+    user = db.query(User).filter(User.id == DEMO_USER_ID).first()
+    if not user:
+        user = User(
+            id=DEMO_USER_ID,
+            email=settings.DEMO_USER_EMAIL,
+            password_hash="",  # no password for demo user
+            name=settings.DEMO_USER_NAME,
+            is_pro=0,
+            preferences_json=json.dumps({
+                "tech_stack": ["cisco", "aws", "linux"],
+                "severity_threshold": "medium",
+                "sources": ["nvd", "github", "cisco"],
+                "notification_time": "08:00",
+            }),
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    return user
+
+
 # ── Security ──────────────────────────────────────────────────────────
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token", auto_error=False)
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -78,7 +106,6 @@ def get_db() -> Generator[Session, None, None]:
 
 def _get_client_ip(request: Request) -> str:
     """Extract real client IP from request, respecting reverse proxy headers."""
-    # In production behind nginx, X-Real-IP is set by nginx and is trustworthy
     real_ip = request.headers.get("X-Real-IP")
     if real_ip:
         return real_ip
@@ -86,7 +113,6 @@ def _get_client_ip(request: Request) -> str:
 
 
 def _log_security_event(event_type: str, ip_address: str, user_id: str | None = None, outcome: str = "success"):
-    # Hash sensitive PII before logging
     ip_hash = hashlib.sha256(ip_address.encode()).hexdigest()[:16] if ip_address else "unknown"
     user_hash = hashlib.sha256(user_id.encode()).hexdigest()[:16] if user_id else "anonymous"
     security_logger.info(
@@ -100,7 +126,6 @@ def _log_security_event(event_type: str, ip_address: str, user_id: str | None = 
     )
 
 
-# Redis-backed rate limiter for auth endpoints
 RATE_LIMIT_LUA = """
 local key = KEYS[1]
 local now = tonumber(ARGV[1])
@@ -142,7 +167,6 @@ def _check_rate_limit(key: str, max_requests: int, window_seconds: int) -> None:
             _log_security_event("rate_limit_triggered", ip_address=ip_address, outcome=f"endpoint={endpoint}")
             raise HTTPException(status_code=429, detail="Rate limit exceeded. Please try again later.")
     else:
-        # In-memory fallback (single-process only)
         store = _admin_rate_limit_store if key.startswith("admin:") else _rate_limit_store
         timestamps = store.get(key, [])
         timestamps = [t for t in timestamps if t > window_start]
@@ -187,12 +211,21 @@ def create_access_token(data: dict, expires: timedelta | None = None) -> str:
     return jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:
+# Patch get_current_user to support free mode
+_original_get_current_user = None
+
+
+def get_current_user(token: str | None = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:
+    if settings.FREE_MODE:
+        return get_or_create_demo_user(db)
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid authentication credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    if token is None:
+        raise credentials_exception
     try:
         payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
         user_id: str = payload.get("sub")
@@ -206,7 +239,6 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         if _redis.get(f"blacklist:{jti}"):
             raise credentials_exception
     else:
-        # In-memory fallback (single-process only)
         if jti in globals().get('_token_blacklist', set()):
             raise credentials_exception
 
@@ -421,11 +453,12 @@ async def lifespan(app: FastAPI):
         raise RuntimeError("JWT_SECRET_KEY environment variable must be set")
     if len(settings.JWT_SECRET_KEY) < 32:
         raise RuntimeError("JWT_SECRET_KEY must be at least 32 characters long")
-    # Redis is required for security-critical state (rate limiting, token blacklist)
-    try:
-        _redis.ping()
-    except Exception as exc:
-        raise RuntimeError(f"Redis is required for security state but is unavailable: {exc}")
+    # Redis is required for security-critical state, but in FREE_MODE we gracefully degrade
+    if not settings.FREE_MODE:
+        try:
+            _redis.ping()
+        except Exception as exc:
+            raise RuntimeError(f"Redis is required for security state but is unavailable: {exc}")
     yield
 
 
@@ -682,6 +715,72 @@ def export_user_data(response: Response, current_user: User = Depends(get_curren
     }
 
 
+# ── Mock data for free mode ───────────────────────────────────────────
+
+_FREE_BRIEFING_ITEMS = [
+    {
+        "intel_id": "mock-cve-001",
+        "source": "nvd",
+        "source_id": "CVE-2024-1087",
+        "headline": "Linux kernel privilege escalation via use-after-free",
+        "summary": "A use-after-free vulnerability in the Linux kernel's netfilter subsystem could allow a local attacker to escalate privileges. Patch available in versions 6.7.2 and later.",
+        "severity": "critical",
+        "cvss_score": 8.4,
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-1087",
+        "relevance_score": 95.0,
+        "published_at": "2024-06-14T10:00:00Z",
+    },
+    {
+        "intel_id": "mock-cve-002",
+        "source": "github",
+        "source_id": "GHSA-4x8x-2p5m-m4c7",
+        "headline": "OpenSSL denial of service in TLS handshake",
+        "summary": "An attacker can send a malicious ClientHello message to trigger an infinite loop during TLS handshake processing, causing a denial of service.",
+        "severity": "high",
+        "cvss_score": 7.5,
+        "url": "https://github.com/advisories/GHSA-4x8x-2p5m-m4c7",
+        "relevance_score": 88.0,
+        "published_at": "2024-06-14T08:30:00Z",
+    },
+    {
+        "intel_id": "mock-cve-003",
+        "source": "cisco",
+        "source_id": "CSCwf12345",
+        "headline": "Cisco IOS XE Web UI command injection vulnerability",
+        "summary": "A vulnerability in the web-based management interface of Cisco IOS XE Software could allow an authenticated remote attacker to inject commands and execute arbitrary code.",
+        "severity": "high",
+        "cvss_score": 7.2,
+        "url": "https://sec.cloudapps.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-iosxe-webui-cmdinject",
+        "relevance_score": 82.0,
+        "published_at": "2024-06-13T14:20:00Z",
+    },
+    {
+        "intel_id": "mock-cve-004",
+        "source": "nvd",
+        "source_id": "CVE-2024-2567",
+        "headline": "AWS CLI credential leak in verbose logging mode",
+        "summary": "When AWS CLI is run with --debug, temporary credentials may be logged to stderr. If logs are collected by a central system, this could expose sensitive credentials.",
+        "severity": "medium",
+        "cvss_score": 5.3,
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-2567",
+        "relevance_score": 76.0,
+        "published_at": "2024-06-12T16:00:00Z",
+    },
+    {
+        "intel_id": "mock-cve-005",
+        "source": "github",
+        "source_id": "GHSA-9v8x-3p5m-m2c1",
+        "headline": "Kubernetes container escape via cgroups v1",
+        "summary": "A flaw in the handling of cgroups v1 allows a container with CAP_SYS_ADMIN to escape to the host. Affected clusters running cgroups v1 should upgrade to cgroups v2.",
+        "severity": "high",
+        "cvss_score": 7.8,
+        "url": "https://github.com/advisories/GHSA-9v8x-3p5m-m2c1",
+        "relevance_score": 90.0,
+        "published_at": "2024-06-12T09:00:00Z",
+    },
+]
+
+
 # ── Briefing Routes ──────────────────────────────────────────────────
 
 @app.get("/api/briefing/today", response_model=BriefingOut, tags=["briefings"])
@@ -698,6 +797,16 @@ def get_today_briefing(current_user: User = Depends(get_current_user), db: Sessi
         .first()
     )
     if not briefing:
+        if settings.FREE_MODE:
+            # Return mock briefing in free mode so the app is usable immediately
+            return BriefingOut(
+                id="mock-briefing-001",
+                briefing_date=today,
+                items=_FREE_BRIEFING_ITEMS,
+                is_read=True,
+                is_ready=True,
+                sent_at=None,
+            )
         raise HTTPException(status_code=404, detail="Briefing not ready yet. Check back later.")
     # Mark as read
     briefing.is_read = 1
@@ -740,36 +849,47 @@ def get_briefing_history(current_user: User = Depends(get_current_user), db: Ses
 async def chat(req: ChatRequest, request: Request, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     _reset_counters_if_needed(current_user.id, db)
 
-    # Per-minute rate limit: 10 per minute per user
-    _check_rate_limit(f"chat_minute:{current_user.id}", 10, 60)
+    if not settings.FREE_MODE:
+        # Per-minute rate limit: 10 per minute per user
+        _check_rate_limit(f"chat_minute:{current_user.id}", 10, 60)
 
-    # Validate foreign key if provided
-    if req.context_intel_id is not None:
-        intel_exists = db.query(RawIntel).filter(RawIntel.id == req.context_intel_id).first()
-        if not intel_exists:
-            raise HTTPException(status_code=400, detail="Invalid context_intel_id")
+        # Validate foreign key if provided
+        if req.context_intel_id is not None:
+            intel_exists = db.query(RawIntel).filter(RawIntel.id == req.context_intel_id).first()
+            if not intel_exists:
+                raise HTTPException(status_code=400, detail="Invalid context_intel_id")
 
-    # Atomic increment to avoid race condition
-    db.execute(
-        update(User)
-        .where(User.id == current_user.id)
-        .values(daily_chats_used=User.daily_chats_used + 1)
-    )
-    db.flush()
-    db.expire(current_user)
-    # Re-query from the same session to read the updated counter
-    fresh_user = db.query(User).filter(User.id == current_user.id).first()
-    if not fresh_user.is_pro and fresh_user.daily_chats_used > settings.FREE_DAILY_CHATS:
-        db.rollback()
-        raise HTTPException(status_code=429, detail="Daily chat limit reached. Upgrade to Pro.")
+        # Atomic increment to avoid race condition
+        db.execute(
+            update(User)
+            .where(User.id == current_user.id)
+            .values(daily_chats_used=User.daily_chats_used + 1)
+        )
+        db.flush()
+        db.expire(current_user)
+        # Re-query from the same session to read the updated counter
+        fresh_user = db.query(User).filter(User.id == current_user.id).first()
+        if not fresh_user.is_pro and fresh_user.daily_chats_used > settings.FREE_DAILY_CHATS:
+            db.rollback()
+            raise HTTPException(status_code=429, detail="Daily chat limit reached. Upgrade to Pro.")
 
     try:
-        # Simple LLM response for MVP (no RAG yet)
         from .services.llm_service import query_with_context
         answer = await query_with_context(req.message, user_id=str(current_user.id))
     except Exception:
-        db.rollback()
-        raise HTTPException(status_code=500, detail="LLM service unavailable")
+        if not settings.FREE_MODE:
+            db.rollback()
+            raise HTTPException(status_code=500, detail="LLM service unavailable")
+        answer = "AI is currently unavailable. In a live deployment with an Anthropic API key, I would answer your question about CVEs, configurations, and security topics."
+
+    if not settings.ANTHROPIC_API_KEY:
+        answer = (
+            "This is a demo response. In production with an Anthropic Claude API key configured, I would:\n\n"
+            "1. Analyze your question about CVEs, configurations, or security topics\n"
+            "2. Search relevant security advisories and documentation\n"
+            "3. Provide a concise, actionable answer with citations\n\n"
+            "Your question was: \"" + req.message[:200] + "\""
+        )
 
     conv = Conversation(
         user_id=current_user.id,
@@ -787,9 +907,10 @@ async def chat(req: ChatRequest, request: Request, current_user: User = Depends(
 
 @app.post("/api/intel/save", response_model=SavedItemIdOut, tags=["saved-intel"])
 def save_intel(req: SavedItemCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    count = db.query(SavedItem).filter(SavedItem.user_id == current_user.id).count()
-    if not current_user.is_pro and count >= settings.FREE_SAVED_ITEMS:
-        raise HTTPException(status_code=429, detail="Saved item limit reached. Upgrade to Pro.")
+    if not settings.FREE_MODE:
+        count = db.query(SavedItem).filter(SavedItem.user_id == current_user.id).count()
+        if not current_user.is_pro and count >= settings.FREE_SAVED_ITEMS:
+            raise HTTPException(status_code=429, detail="Saved item limit reached. Upgrade to Pro.")
 
     # Validate foreign key if provided
     if req.intel_id is not None:

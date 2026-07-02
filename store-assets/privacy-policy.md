@@ -46,10 +46,10 @@ By using OpsBrief, you agree to the collection and use of information in accorda
 
 We do not sell your personal data. We share data only with trusted service providers necessary to operate the app:
 
-### 4.1 OpenAI
+### 4.1 Anthropic Claude
 - **Purpose**: AI chat processing and natural language analysis of security briefings.
 - **Data Shared**: Chat messages and related briefing context (CVE IDs, descriptions).
-- **Protection**: OpenAI processes data under their API privacy terms; no data is used to train OpenAI models via our API integration.
+- **Protection**: Anthropic processes data under their API privacy terms; no data is used to train Anthropic models via our API integration.
 
 ### 4.2 Intelligence Sources (NVD, GitHub, Cisco)
 - **Purpose**: Source vulnerability data for briefings.
@@ -60,9 +60,9 @@ We do not sell your personal data. We share data only with trusted service provi
 - **Data Shared**: User data is stored on the server. We recommend configuring HTTPS and database encryption for production deployments.
 - **Providers**: [Your hosting provider, e.g., AWS / DigitalOcean / Vercel]
 
-### 4.4 OpenAI Data Processing Disclosure
+### 4.4 Anthropic Claude Data Processing Disclosure
 
-When you use the AI chat assistant, your chat messages and related briefing context (such as CVE IDs and descriptions) are sent to OpenAI for processing. This does not include your personal information (email, name, or account details) unless you explicitly include it in your chat message. OpenAI processes this data under their API privacy terms, and no data is used to train OpenAI models via our API integration.
+When you use the AI chat assistant, your chat messages and related briefing context (such as CVE IDs and descriptions) are sent to Anthropic Claude for processing. This does not include your personal information (email, name, or account details) unless you explicitly include it in your chat message. Anthropic processes this data under their API privacy terms, and no data is used to train Anthropic models via our API integration.
 
 ## 5. Data Retention
 

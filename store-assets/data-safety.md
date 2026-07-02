@@ -35,7 +35,7 @@
 | **Address** | No | N/A | N/A | No | N/A |
 | **User preferences** (tech stack, notifications, theme) | Yes | No | Yes | No | Personalization of daily briefings and app experience |
 | **App activity** (saved intel, bookmarks) | Yes | No | Yes | No | Core app feature — user-curated security knowledge base |
-| **Messages** (chat with AI assistant) | Yes | Yes — with OpenAI | Yes | No | AI chat processing, threat analysis, remediation guidance |
+| **Messages** (chat with AI assistant) | Yes | Yes — with Anthropic | Yes | No | AI chat processing, threat analysis, remediation guidance |
 | **Photos / Videos** | No | N/A | N/A | No | N/A |
 | **Location** | No | N/A | N/A | No | N/A |
 | **Files / docs** | No | N/A | N/A | No | N/A |
@@ -57,7 +57,7 @@
 
 | Third Party | Data Shared | Purpose | User Consent |
 |-------------|-------------|---------|--------------|
-| **OpenAI** | Chat messages and briefing context (CVE IDs, descriptions). Personal information (email, name, account details) is not shared. | AI chat processing, natural language threat analysis | Explicit — users must opt in via onboarding checkbox and accept the Terms of Service |
+| **Anthropic Claude** | Chat messages and briefing context (CVE IDs, descriptions). Personal information (email, name, account details) is not shared. | AI chat processing, natural language threat analysis | Explicit — users must opt in via onboarding checkbox and accept the Terms of Service |
 | **NVD (National Vulnerability Database)** | None | Read-only public API — source of CVE data | N/A |
 | **GitHub Security Advisories** | None | Read-only public API — source of CVE data | N/A |
 | **Cisco Security Advisories** | None | Read-only public API — source of threat intel | N/A |
@@ -66,7 +66,7 @@
 > **Note:** Push notifications are not yet implemented. No data is currently shared with push notification providers.
 
 > **Note:** No data is sold to any third party. No data is used for advertising or marketing beyond in-app product updates.
-> **Onboarding Consent:** New users must explicitly check boxes during registration confirming they are 13 years of age or older, agreeing to the Terms of Service and Privacy Policy, and acknowledging that their chat messages and briefing context will be shared with OpenAI for AI processing. These checkboxes are required before account creation can proceed.
+> **Onboarding Consent:** New users must explicitly check boxes during registration confirming they are 13 years of age or older, agreeing to the Terms of Service and Privacy Policy, and acknowledging that their chat messages and briefing context will be shared with Anthropic Claude for AI processing. These checkboxes are required before account creation can proceed.
 
 ---
 
@@ -99,7 +99,7 @@
 - [x] User consent is obtained via Terms of Use acceptance at account creation.
 - [x] Data is encrypted in transit (HTTPS/TLS is used for all production API communication).
 - [x] Users have a clear path to request data deletion.
-- [x] Third-party sharing is limited to essential service providers (OpenAI for AI chat only).
+- [x] Third-party sharing is limited to essential service providers (Anthropic Claude for AI chat only).
 - [x] No data is used for advertising, tracking, or profiling beyond app functionality.
 - [x] Children under 13 are not permitted to use the app.
 
