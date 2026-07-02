@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+.env
+.env.local
+.env.*
+.venv
+.git/
+*.db
+test_*.db
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+run.py
+Dockerfile
+*.md
+*.log

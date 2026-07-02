@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:8000 https://api.opsbrief.com;">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta property="og:title" content="OpsBrief — Daily Intel for IT Professionals">
+<meta property="og:description" content="Curated cybersecurity briefings for IT professionals">
+<meta property="og:type" content="website">
+<title>OpsBrief — Daily Intel for IT Professionals</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f172a;
+  --bg-elevated: #1e293b;
+  --bg-card: #1e293b;
+  --border: #334155;
+  --text: #f1f5f9;
+  --text-muted: #94a3b8;
+  --text-dim: #94a3b8;
+  --accent: #3b82f6;
+  --accent-glow: #60a5fa;
+  --success: #22c55e;
+  --warning: #eab308;
+  --danger: #ef4444;
+  --critical: #dc2626;
+  --high: #f97316;
+  --medium: #eab308;
+  --low: #22c55e;
+  --info: #3b82f6;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 4px 20px rgba(0,0,0,0.3);
+  --transition: 0.2s ease;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* App Shell */
+#app { max-width: 480px; margin: 0 auto; min-height: 100vh; position: relative; }
+
+/* Screen system */
+.screen { display: none; animation: fadeIn 0.3s ease; padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+.screen.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Header */
+.header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(15,23,42,0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border); padding: 16px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.header h1, .header .app-title { font-size: 18px; font-weight: 700; }
+.header .logo { display: flex; align-items: center; gap: 10px; }
+.header .logo-icon {
+  width: 32px; height: 32px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-glow));
+  display: flex; align-items: center; justify-content: center; font-size: 16px;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 14px 24px; border-radius: var(--radius-sm); font-weight: 600; font-size: 15px;
+  border: none; cursor: pointer; transition: var(--transition); width: 100%;
+}
+.btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent-glow)); color: #fff; }
+.btn-primary:active { transform: scale(0.97); }
+.btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+.btn-sm { padding: 8px 16px; font-size: 13px; width: auto; }
+.btn-danger { background: transparent; border: 1.5px solid var(--danger); color: var(--danger); }
+.btn-danger:active { transform: scale(0.97); }
+
+/* Cards */
+.card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 20px; margin: 12px 20px; transition: var(--transition);
+}
+.card:active { background: #263449; }
+
+/* Forms */
+input, textarea, select {
+  width: 100%; padding: 14px 16px; border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border); background: var(--bg); color: var(--text);
+  font-size: 15px; font-family: inherit; outline: none; transition: var(--transition);
+}
+input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+input::placeholder { color: var(--text-dim); }
+.field-error { color: var(--danger); font-size: 12px; margin-top: 4px; display: none; }
+.field-error.show { display: block; }
+.password-strength { height: 4px; border-radius: 2px; background: var(--border); margin-top: 8px; overflow: hidden; transition: var(--transition); }
+.password-strength-bar { height: 100%; width: 0; border-radius: 2px; transition: width 0.3s ease, background 0.3s ease; }
+.password-strength-bar.weak { width: 33%; background: var(--danger); }
+.password-strength-bar.medium { width: 66%; background: var(--warning); }
+.password-strength-bar.strong { width: 100%; background: var(--success); }
+.password-strength-label { font-size: 11px; margin-top: 4px; color: var(--text-muted); }
+
+/* Severity badges */
+.badge { display: inline-flex; padding: 4px 10px; border-radius: 100px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+.badge-critical { background: rgba(220,38,38,0.15); color: #fca5a5; }
+.badge-high { background: rgba(249,115,22,0.15); color: #fdba74; }
+.badge-medium { background: rgba(234,179,8,0.15); color: var(--medium); }
+.badge-low { background: rgba(34,197,94,0.15); color: var(--low); }
+.badge-info { background: rgba(59,130,246,0.15); color: #93c5fd; }
+
+/* Bottom Nav */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 480px; z-index: 100;
+  background: rgba(15,23,42,0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+}
+.nav-item {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 6px 16px; color: var(--text-dim); font-size: 11px; font-weight: 500;
+  cursor: pointer; transition: var(--transition); border: none; background: none;
+}
+.nav-item.active { color: var(--accent); }
+.nav-item .icon { font-size: 22px; }
+
+/* Loading */
+.loading { display: flex; justify-content: center; padding: 40px; }
+.spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+.skeleton { background: linear-gradient(90deg, var(--bg-elevated) 25%, var(--bg-card) 50%, var(--bg-elevated) 75%); background-size: 200% 100%; border-radius: var(--radius-sm); animation: skeletonPulse 1.5s ease-in-out infinite; }
+.skeleton-title { height: 16px; width: 60%; margin-bottom: 10px; }
+.skeleton-text { height: 12px; width: 100%; margin-bottom: 8px; }
+.skeleton-text-short { width: 75%; }
+.skeleton-badge { height: 20px; width: 60px; margin-bottom: 10px; }
+@keyframes skeletonPulse { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Toast */
+.toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000;
+  background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 12px 20px; font-size: 14px; font-weight: 500; box-shadow: var(--shadow);
+  animation: slideDown 0.3s ease; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+.toast.show { opacity: 1; pointer-events: auto; }
+@keyframes slideDown { from { transform: translate(-50%, -20px); } to { transform: translate(-50%, 0); } }
+
+/* Scrollbar */
+html { color-scheme: dark; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+html { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+
+/* Specific screens */
+
+/* Login */
+#login-screen { display: flex; flex-direction: column; justify-content: center; min-height: 100vh; padding: 40px 24px; }
+.login-logo { text-align: center; margin-bottom: 40px; }
+.login-logo .logo-icon { width: 64px; height: 64px; border-radius: 20px; margin: 0 auto 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--accent), var(--accent-glow)); }
+.login-logo h1, .login-logo h2 { font-size: 24px; font-weight: 800; margin-bottom: 8px; }
+.login-logo p { color: var(--text-muted); font-size: 15px; }
+.login-form { display: flex; flex-direction: column; gap: 16px; }
+.login-form .form-group { display: flex; flex-direction: column; gap: 6px; }
+.login-form label { font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.login-form .toggle { text-align: center; margin-top: 8px; color: var(--text-muted); font-size: 14px; }
+.login-form .toggle a { color: var(--accent); font-weight: 600; cursor: pointer; }
+
+/* Onboarding */
+.onboarding-step { padding: 20px; }
+.onboarding-step h1, .onboarding-step h2 { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+.onboarding-step p { color: var(--text-muted); margin-bottom: 24px; font-size: 15px; }
+.tech-stack-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+.tech-item { background: var(--bg-elevated); border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 14px; text-align: center; cursor: pointer; transition: var(--transition); font-size: 14px; font-weight: 500; }
+.tech-item.selected { border-color: var(--accent); background: rgba(59,130,246,0.1); }
+.tech-item .emoji { font-size: 20px; display: block; margin-bottom: 4px; }
+.onboarding-dots { display: flex; justify-content: center; gap: 8px; margin: 24px 0; }
+.onboarding-dots .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
+.onboarding-dots .dot.active { background: var(--accent); }
+
+/* Briefing */
+#briefing-screen .briefing-date { font-size: 13px; color: var(--text-muted); text-align: center; padding: 12px 0; }
+.briefing-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin: 8px 20px; cursor: pointer; transition: var(--transition); }
+.briefing-item:active { background: #263449; }
+.briefing-item .item-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.briefing-item .item-title { font-size: 15px; font-weight: 700; line-height: 1.4; flex: 1; }
+.briefing-item .item-summary { font-size: 14px; color: var(--text-muted); line-height: 1.5; }
+.briefing-item .item-meta { display: flex; gap: 12px; margin-top: 10px; font-size: 12px; color: var(--text-dim); }
+.briefing-item .item-meta span { display: flex; align-items: center; gap: 4px; }
+.briefing-empty { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+.briefing-empty .icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+.briefing-empty h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; color: var(--text); }
+
+/* Chat */
+.chat-container { display: flex; flex-direction: column; height: calc(100vh - 140px); padding: 0 20px; }
+.chat-messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding: 16px 0; }
+.chat-message { max-width: 85%; padding: 14px 18px; border-radius: 18px; font-size: 14px; line-height: 1.6; overflow-wrap: break-word; }
+.chat-message.user { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+.chat-message.assistant { align-self: flex-start; background: var(--bg-elevated); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+.chat-message .timestamp { font-size: 11px; opacity: 0.6; margin-top: 6px; }
+.chat-input-bar { display: flex; gap: 10px; padding: 12px 0; border-top: 1px solid var(--border); }
+.chat-input-bar input { flex: 1; border-radius: 24px; padding: 12px 18px; }
+.chat-input-bar button { width: 48px; height: 48px; border-radius: 50%; background: var(--accent); border: none; color: #fff; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.chat-input-bar button:disabled { opacity: 0.5; }
+
+/* Saved */
+.saved-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin: 8px 20px; }
+.saved-item .item-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+.saved-item .item-content { font-size: 14px; color: var(--text-muted); line-height: 1.5; }
+.saved-item .item-tags { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.saved-item .tag { background: var(--bg); padding: 4px 10px; border-radius: 100px; font-size: 11px; color: var(--text-muted); }
+
+/* Settings */
+.settings-group { padding: 0 20px; margin-bottom: 24px; }
+.settings-group h3 { font-size: 13px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+.settings-row { display: flex; align-items: center; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid var(--border); }
+.settings-row .label { font-size: 15px; font-weight: 500; }
+.settings-row .value { font-size: 14px; color: var(--text-muted); }
+
+/* Pro badge */
+.pro-badge { display: inline-flex; align-items: center; gap: 4px; background: linear-gradient(135deg, #eab308, #f59e0b); color: #000; padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 700; }
+
+/* Stats ring */
+.stats-ring { width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; position: relative; }
+.stats-ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.stats-ring .ring-bg { fill: none; stroke: var(--border); stroke-width: 6; }
+.stats-ring .ring-fill { fill: none; stroke: var(--accent); stroke-width: 6; stroke-linecap: round; stroke-dasharray: 220; stroke-dashoffset: 150; transition: stroke-dashoffset 0.5s ease; }
+.stats-ring .ring-text { font-size: 22px; font-weight: 800; position: relative; z-index: 1; }
+
+/* Responsive */
+@media (max-width: 400px) {
+  .card { margin: 8px 12px; padding: 16px; }
+  .briefing-item { margin: 6px 12px; padding: 12px; }
+}
+@media (min-width: 768px) {
+  #app { max-width: 720px; margin: 0 auto; }
+}
+@media (min-width: 1024px) {
+  #app { max-width: 960px; }
+}
+/* Hover states */
+@media (hover: hover) {
+  .btn:hover { opacity: 0.9; }
+  .card:hover { border-color: var(--accent); }
+  .nav-item:hover { color: var(--accent); }
+  .briefing-item:hover { border-color: var(--accent); }
+}
+/* Focus indicators */
+*:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Skip link */
+.skip-link { position: absolute; left: -9999px; }
+.skip-link:focus { left: 8px; top: 8px; z-index: 10000; background: var(--accent); color: #fff; padding: 8px 16px; border-radius: var(--radius); }
+
+/* Screen-reader-only */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+/* Chat welcome */
+.chat-welcome { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+.chat-welcome h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; color: var(--text); }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .spinner { animation: none !important; }
+}
+/* Hide bottom nav when visual viewport shrinks (keyboard open) */
+@media (max-height: 500px) {
+  .bottom-nav { display: none !important; }
+}
+</style>
+</head>
+<body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
+<script>
+if ('serviceWorker' in navigator) {
+  const SW_VERSION = 'opsbrief-v2'; // BUMP this on every HTML update to prevent stale cache poisoning
+  // NOTE: sw.js should keep API responses in a separate cache (e.g., 'opsbrief-api-v1') so they don't pollute the static shell cache.
+  navigator.serviceWorker.register('sw.js?v=' + SW_VERSION).catch(err => console.error('SW failed:', err));
+  navigator.serviceWorker.addEventListener('message', event => {
+    if (event.data && event.data.type === 'OFFLINE' && typeof showToast === 'function') showToast('You are offline');
+  });
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload();
+  });
+}
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); window.deferredInstallPrompt = e; });
+function _updateOfflineBanner() {
+  const banner = document.getElementById('offline-banner');
+  if (banner) banner.style.display = navigator.onLine ? 'none' : 'block';
+}
+function _offlineCheck() {
+  if (typeof showToast === 'function') { if (!navigator.onLine) showToast('You are offline'); }
+  else setTimeout(_offlineCheck, 50);
+  _updateOfflineBanner();
+}
+_offlineCheck();
+window.addEventListener('offline', () => { if (typeof showToast === 'function') showToast('You are offline'); _updateOfflineBanner(); });
+window.addEventListener('online', () => { if (typeof showToast === 'function') showToast('Back online'); _updateOfflineBanner(); });
+</script>
+<div id="app">
+
+<!-- Offline banner -->
+<div id="offline-banner" style="display:none; background:var(--danger); color:#fff; text-align:center; padding:8px; font-size:13px; font-weight:600;">You are offline</div>
+
+<!-- Toast -->
+<div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+<!-- ==================== LOGIN SCREEN ==================== -->
+<section id="login-screen" class="screen active">
+  <div class="login-logo">
+    <div class="logo-icon" aria-hidden="true">📡</div>
+    <h1>OpsBrief</h1>
+    <p>Daily intelligence for IT professionals</p>
+  </div>
+  <form id="login-form" class="login-form" onsubmit="handleLogin(); return false;">
+    <div class="form-group"><label for="login-email">Email</label><input type="email" id="login-email" placeholder="you@company.com" value="" autocomplete="email" autocapitalize="none" autocorrect="off" maxlength="254" enterkeyhint="next" required aria-required="true"><span class="field-error" aria-live="polite" id="login-email-error">Email is required</span></div>
+    <div class="form-group"><label for="login-password">Password</label><div style="display:flex;gap:8px;align-items:center;"><input type="password" id="login-password" placeholder="••••••••" value="" autocomplete="current-password" maxlength="128" style="flex:1" required aria-required="true"><button type="button" class="btn btn-outline btn-sm" onclick="togglePassword('login-password')" aria-label="Toggle password visibility" style="width:auto"><span aria-hidden="true">👁</span></button></div><span class="field-error" aria-live="polite" id="login-password-error">Password is required</span></div>
+    <button type="submit" class="btn btn-primary" id="login-btn">Sign In</button>
+    <div class="toggle">New here? <button type="button" style="background:none;border:none;color:var(--accent);font-weight:600;cursor:pointer;font-size:inherit;font-family:inherit;padding:0" onclick="showSignup()">Create account</button></div>
+  </form>
+  <form id="signup-form" class="login-form" style="display:none" onsubmit="handleSignup(); return false;">
+    <div class="form-group"><label for="signup-email">Email</label><input type="email" id="signup-email" placeholder="you@company.com" autocomplete="email" autocapitalize="none" autocorrect="off" maxlength="254" required aria-required="true"><span class="field-error" aria-live="polite" id="signup-email-error">Email is required</span></div>
+    <div class="form-group"><label for="signup-password">Password</label><div style="display:flex;gap:8px;align-items:center;"><input type="password" id="signup-password" placeholder="Min 8 characters" autocomplete="new-password" maxlength="128" style="flex:1" oninput="checkPasswordStrength(this.value)" required aria-required="true"><button type="button" class="btn btn-outline btn-sm" onclick="togglePassword('signup-password')" aria-label="Toggle password visibility" style="width:auto"><span aria-hidden="true">👁</span></button></div><div class="password-strength"><div class="password-strength-bar" id="password-strength-bar"></div></div><div class="password-strength-label" id="password-strength-label"></div><span class="field-error" aria-live="polite" id="signup-password-error">Password is required</span></div>
+    <div class="form-group"><label for="signup-name">Name</label><input type="text" id="signup-name" placeholder="Your name" autocomplete="name" maxlength="128" required aria-required="true"><span class="field-error" aria-live="polite" id="signup-name-error">Name is required</span></div>
+    <div class="form-group">
+      <div style="display:flex;align-items:flex-start;gap:10px;">
+        <input type="checkbox" id="signup-age" style="width:auto;padding:0;height:auto;margin-top:2px;" required aria-required="true">
+        <label for="signup-age" style="text-transform:none;font-weight:400;font-size:14px;cursor:pointer;">I am 13 years of age or older.</label>
+      </div>
+      <span class="field-error" aria-live="polite" id="signup-age-error">You must confirm you are 13 or older</span>
+    </div>
+    <div class="form-group">
+      <div style="display:flex;align-items:flex-start;gap:10px;">
+        <input type="checkbox" id="signup-tos" style="width:auto;padding:0;height:auto;margin-top:2px;" required aria-required="true">
+        <label for="signup-tos" style="text-transform:none;font-weight:400;font-size:14px;cursor:pointer;">I agree to the <a href="https://photon-bounce.com/terms-of-service/" target="_blank" rel="noopener noreferrer" style="color:var(--accent);" onclick="event.stopPropagation()">Terms of Service</a> and <a href="https://photon-bounce.com/privacy-policy/" target="_blank" rel="noopener noreferrer" style="color:var(--accent);" onclick="event.stopPropagation()">Privacy Policy</a>, and I understand that my chat messages may be processed by OpenAI for AI responses.</label>
+      </div>
+      <span class="field-error" aria-live="polite" id="signup-tos-error">You must agree to the Terms of Service and Privacy Policy</span>
+    </div>
+    <button type="submit" class="btn btn-primary" id="signup-btn">Create Account</button>
+    <div class="toggle">Already have an account? <button type="button" style="background:none;border:none;color:var(--accent);font-weight:600;cursor:pointer;font-size:inherit;font-family:inherit;padding:0" onclick="showLogin()">Sign in</button></div>
+  </form>
+</section>
+
+<!-- ==================== ONBOARDING SCREEN ==================== -->
+<section id="onboarding-screen" class="screen">
+  <header class="header" style="border:none"><div class="logo"><div class="logo-icon" role="img" aria-label="OpsBrief">📡</div><span class="app-title">OpsBrief</span></div></header>
+  <div id="onboarding-content">
+    <div class="onboarding-step" id="step-1">
+      <h1>What do you work with?</h1>
+      <p>Select your tech stack so we can curate the most relevant intel.</p>
+      <div class="tech-stack-grid" id="tech-stack-grid"></div>
+      <div class="onboarding-dots"><div class="dot active"></div><div class="dot"></div></div>
+      <button type="button" class="btn btn-primary" onclick="nextOnboarding()">Continue</button>
+    </div>
+    <div class="onboarding-step" id="step-2" style="display:none">
+      <h1>When should we deliver?</h1>
+      <p>Choose your preferred time for the daily briefing.</p>
+      <div style="margin: 40px 0; text-align: center;">
+        <label for="notification-time" style="display:block;margin-bottom:8px;color:var(--text-muted);font-size:14px;">Delivery time</label>
+        <input type="time" id="notification-time" value="08:00" style="font-size: 24px; text-align: center; width: 160px; display: inline-block;">
+      </div>
+      <div class="onboarding-dots"><div class="dot"></div><div class="dot active"></div></div>
+      <button type="button" class="btn btn-primary" onclick="finishOnboarding()" id="onboarding-btn">Get Started</button>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== BRIEFING SCREEN ==================== -->
+<section id="briefing-screen" class="screen">
+  <header class="header">
+    <div class="logo"><div class="logo-icon" role="img" aria-label="OpsBrief">📡</div><h1>OpsBrief</h1></div>
+    <div id="user-pro-badge"></div>
+  </header>
+  <div class="briefing-date" id="briefing-date"></div>
+  <div id="ptr-indicator" style="display:none;text-align:center;padding:8px;color:var(--text-muted);font-size:13px;">Refreshing...</div>
+  <div id="briefing-content" aria-live="polite">
+    <span class="sr-only">Loading briefing...</span>
+    <div class="briefing-skeleton" style="margin:8px 20px;">
+      <div class="skeleton skeleton-badge"></div>
+      <div class="skeleton skeleton-title"></div>
+      <div class="skeleton skeleton-text"></div>
+      <div class="skeleton skeleton-text skeleton-text-short"></div>
+    </div>
+    <div class="briefing-skeleton" style="margin:8px 20px;">
+      <div class="skeleton skeleton-badge"></div>
+      <div class="skeleton skeleton-title"></div>
+      <div class="skeleton skeleton-text"></div>
+      <div class="skeleton skeleton-text skeleton-text-short"></div>
+    </div>
+    <div class="briefing-skeleton" style="margin:8px 20px;">
+      <div class="skeleton skeleton-badge"></div>
+      <div class="skeleton skeleton-title"></div>
+      <div class="skeleton skeleton-text"></div>
+      <div class="skeleton skeleton-text skeleton-text-short"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== CHAT SCREEN ==================== -->
+<section id="chat-screen" class="screen">
+  <header class="header"><h1>Ask OpsBrief</h1></header>
+  <div class="chat-container">
+    <div class="chat-messages" id="chat-messages" aria-live="polite">
+      <div class="chat-welcome"><h3>Ask OpsBrief</h3><p>Try: "Any critical CVEs for Cisco?"</p></div>
+    </div>
+    <div class="chat-input-bar">
+      <input type="text" id="chat-input" placeholder="Ask about a CVE, config, or vulnerability..." onkeydown="if(event.key==='Enter')sendChat()" enterkeyhint="send" maxlength="500" aria-label="Ask OpsBrief a question">
+      <button type="button" onclick="sendChat()" id="send-btn" aria-label="Send message"><span aria-hidden="true">➤</span></button>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== SAVED SCREEN ==================== -->
+<section id="saved-screen" class="screen">
+  <header class="header"><h1>Saved Intel</h1></header>
+  <div id="saved-content" aria-live="polite"><div class="loading"><span class="sr-only">Loading saved intel...</span><div class="spinner"></div></div></div>
+</section>
+
+<!-- ==================== SETTINGS SCREEN ==================== -->
+<section id="settings-screen" class="screen">
+  <header class="header"><h1>Settings</h1></header>
+  <div class="settings-group">
+    <h3>Account</h3>
+    <div class="settings-row"><span class="label">Email</span><span class="value" id="settings-email">—</span></div>
+    <div class="settings-row"><span class="label">Plan</span><span id="settings-plan">Free</span></div>
+  </div>
+  <div class="settings-group">
+    <h3>Preferences</h3>
+    <div class="settings-row" onclick="showScreen('onboarding-screen')" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showScreen('onboarding-screen')}" style="cursor:pointer" role="button"><span class="label">Tech Stack</span><span class="value">Edit →</span></div>
+    <div class="settings-row"><span class="label">Dark Mode</span><span class="value">Always On</span></div>
+  </div>
+  <div class="settings-group">
+    <h3>Support</h3>
+    <div class="settings-row" onclick="openExternal('https://photon-bounce.com/privacy-policy/')" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openExternal('https://photon-bounce.com/privacy-policy/')}" style="cursor:pointer" role="link"><span class="label">Privacy Policy</span><span class="value">→</span></div>
+    <div class="settings-row" onclick="openExternal('https://photon-bounce.com/terms-of-service/')" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openExternal('https://photon-bounce.com/terms-of-service/')}" style="cursor:pointer" role="link"><span class="label">Terms of Service</span><span class="value">→</span></div>
+    <div class="settings-row" style="color:var(--danger); cursor:pointer" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();logout()}" onclick="logout()" role="button"><span class="label">Sign Out</span><span class="value">→</span></div>
+  </div>
+  <div class="settings-group" style="margin-top: 24px;">
+    <button type="button" class="btn btn-danger" onclick="handleDeleteAccount()">Delete Account</button>
+  </div>
+</section>
+
+<!-- Bottom Navigation -->
+<nav class="bottom-nav" id="bottom-nav" style="display:none">
+  <button type="button" class="nav-item active" data-screen="briefing-screen" onclick="navTo(this)" aria-label="Briefing" aria-current="page"><span class="icon" aria-hidden="true">📋</span><span>Briefing</span></button>
+  <button type="button" class="nav-item" data-screen="chat-screen" onclick="navTo(this)" aria-label="Chat"><span class="icon" aria-hidden="true">💬</span><span>Chat</span></button>
+  <button type="button" class="nav-item" data-screen="saved-screen" onclick="navTo(this)" aria-label="Saved"><span class="icon" aria-hidden="true">🔖</span><span>Saved</span></button>
+  <button type="button" class="nav-item" data-screen="settings-screen" onclick="navTo(this)" aria-label="Settings"><span class="icon" aria-hidden="true">⚙️</span><span>Settings</span></button>
+</nav>
+
+</div><!-- #app -->
+
+<script>
+if (typeof AbortController === 'undefined') {
+  window.AbortController = class AbortController {
+    constructor() {
+      this.signal = { aborted: false, addEventListener: function(){}, removeEventListener: function(){} };
+    }
+    abort() { this.signal.aborted = true; }
+  };
+}
+// ==================== CONFIG ====================
+const API_BASE = (window.Capacitor && window.Capacitor.isNativePlatform())
+  ? 'https://api.opsbrief.com'  // production API
+  : (window.location.hostname === 'localhost' ? 'http://localhost:8000' : '');
+
+// ==================== STATE ====================
+let token = null;
+try { token = localStorage.getItem('opsbrief_token'); } catch (e) {}
+let user = null;
+let isLoginSubmitting = false;
+let isSignupSubmitting = false;
+let isChatSubmitting = false;
+let isOnboardingSubmitting = false;
+let briefingController = null;
+let savedController = null;
+let intendedScreen = null;
+
+// ==================== UTILS ====================
+function showToast(msg, undoId) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  if (undoId) {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-sm btn-outline';
+    btn.style.cssText = 'width:auto;margin-left:8px;padding:4px 10px;font-size:12px;';
+    btn.textContent = 'Undo';
+    btn.onclick = () => undoSave(undoId);
+    t.appendChild(btn);
+  }
+  if (showToast._timer) clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+async function openExternal(url) {
+  if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser) {
+    await window.Capacitor.Plugins.Browser.open({ url });
+  } else {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+}
+function togglePassword(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const isHidden = el.type === 'password';
+  el.type = isHidden ? 'text' : 'password';
+  const btn = el.parentElement.querySelector('button');
+  if (btn) {
+    btn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+    btn.setAttribute('aria-pressed', isHidden ? 'true' : 'false');
+  }
+}
+function setBtnLoading(btn, isLoading, originalText) {
+  if (!btn) return;
+  btn.disabled = isLoading;
+  if (isLoading) {
+    btn.dataset.originalText = originalText || btn.textContent;
+    btn.textContent = 'Loading...';
+  } else {
+    btn.textContent = btn.dataset.originalText || originalText || btn.textContent;
+  }
+}
+function clearFieldErrors() {
+  document.querySelectorAll('.field-error').forEach(el => el.classList.remove('show'));
+  document.querySelectorAll('input, textarea, select').forEach(el => {
+    el.style.borderColor = '';
+    el.removeAttribute('aria-invalid');
+    el.removeAttribute('aria-describedby');
+  });
+  const pwdErr = document.getElementById('signup-password-error');
+  if (pwdErr) pwdErr.textContent = 'Password is required';
+}
+document.querySelectorAll('input, textarea, select').forEach(el => {
+  el.addEventListener('focus', clearFieldErrors);
+});
+function checkPasswordStrength(value) {
+  const bar = document.getElementById('password-strength-bar');
+  const label = document.getElementById('password-strength-label');
+  if (!bar || !label) return;
+  bar.className = 'password-strength-bar';
+  let score = 0;
+  if (value.length >= 8) score++;
+  if (/[A-Z]/.test(value)) score++;
+  if (/[0-9]/.test(value)) score++;
+  if (/[^A-Za-z0-9]/.test(value)) score++;
+  if (value.length === 0) { label.textContent = ''; return; }
+  if (score <= 1) { bar.classList.add('weak'); label.textContent = 'Weak'; }
+  else if (score <= 2) { bar.classList.add('medium'); label.textContent = 'Medium'; }
+  else { bar.classList.add('strong'); label.textContent = 'Strong'; }
+}
+function showFieldError(inputId, errorId) {
+  const input = document.getElementById(inputId);
+  const error = document.getElementById(errorId);
+  if (input) {
+    input.style.borderColor = 'var(--danger)';
+    input.setAttribute('aria-invalid', 'true');
+    input.setAttribute('aria-describedby', errorId);
+  }
+  if (error) error.classList.add('show');
+}
+function showScreen(id, skipHistory) {
+  document.querySelectorAll('.screen').forEach(s => {
+    s.classList.remove('active');
+    if (s.id === 'main-content') {
+      s.id = s.dataset.originalId;
+    }
+  });
+  const newScreen = document.getElementById(id);
+  if (newScreen) {
+    newScreen.dataset.originalId = id;
+    newScreen.id = 'main-content';
+    newScreen.classList.add('active');
+    if (!skipHistory && (history.state && history.state.screen) !== id) {
+      history.pushState({screen: id}, '', '#' + id);
+    }
+  }
+  document.querySelectorAll('.nav-item').forEach(n => { n.classList.remove('active'); n.removeAttribute('aria-current'); });
+  const btn = document.querySelector(`.nav-item[data-screen="${id}"]`);
+  if (btn) { btn.classList.add('active'); btn.setAttribute('aria-current', 'page'); }
+  const titles = {
+    'login-screen': 'Sign In | OpsBrief',
+    'onboarding-screen': 'Onboarding | OpsBrief',
+    'briefing-screen': 'Briefing | OpsBrief',
+    'chat-screen': 'Chat | OpsBrief',
+    'saved-screen': 'Saved Intel | OpsBrief',
+    'settings-screen': 'Settings | OpsBrief'
+  };
+  document.title = titles[id] || 'OpsBrief';
+  const heading = newScreen ? newScreen.querySelector('h1, h2') : null;
+  if (heading) { heading.setAttribute('tabindex', '-1'); heading.focus(); }
+}
+function navTo(el) { showScreen(el.dataset.screen); }
+
+async function api(method, path, body, signal) {
+  if (!navigator.onLine) { showToast('You are offline'); return null; }
+  const controller = new AbortController();
+  let isTimeout = false;
+  const timeoutId = setTimeout(() => { isTimeout = true; controller.abort(); }, 10000);
+  const opts = { method, headers: {}, signal: controller.signal };
+  if (signal) {
+    signal.addEventListener('abort', () => { clearTimeout(timeoutId); controller.abort(); });
+  }
+  let currentToken = null;
+  try { currentToken = localStorage.getItem('opsbrief_token'); } catch (e) {}
+  if (currentToken) opts.headers['Authorization'] = 'Bearer ' + currentToken;
+  if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+  try {
+    const r = await fetch(API_BASE + path, opts);
+    clearTimeout(timeoutId);
+    if (r.status === 401) { logout(); showToast('Session expired. Please sign in again.'); return null; }
+    if (r.status === 429) { showToast('Daily limit reached. Upgrade to Pro.'); return null; }
+    if (!r.ok) {
+      const ct = r.headers.get('content-type') || '';
+      const d = ct.includes('application/json') ? await r.json() : { detail: await r.text() };
+      showToast(d.detail || 'Error'); return null;
+    }
+    if (r.status === 204) return {};
+    const ct = r.headers.get('content-type') || '';
+    return ct.includes('application/json') ? await r.json() : null;
+  } catch(e) {
+    clearTimeout(timeoutId);
+    if (e.name === 'AbortError' && !isTimeout) return null;
+    showToast('Network error'); return null;
+  }
+}
+
+// ==================== AUTH ====================
+function showLogin() { document.getElementById('login-form').style.display='flex'; document.getElementById('signup-form').style.display='none'; }
+function showSignup() { document.getElementById('login-form').style.display='none'; document.getElementById('signup-form').style.display='flex'; }
+
+async function handleLogin() {
+  if (isLoginSubmitting) return;
+  isLoginSubmitting = true;
+  clearFieldErrors();
+  const email = document.getElementById('login-email').value.trim();
+  const passwordEl = document.getElementById('login-password');
+  const password = passwordEl.value;
+  if (!email) { showFieldError('login-email', 'login-email-error'); isLoginSubmitting = false; return; }
+  if (!password) { showFieldError('login-password', 'login-password-error'); isLoginSubmitting = false; return; }
+  setBtnLoading(document.getElementById('login-btn'), true, 'Sign In');
+  const form = new FormData();
+  form.append('username', email);
+  form.append('password', password);
+  const opts = { method: 'POST', headers: {}, body: form };
+  if (!navigator.onLine) { showToast('You are offline'); isLoginSubmitting = false; setBtnLoading(document.getElementById('login-btn'), false); return; }
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  try {
+    const r = await fetch(API_BASE + '/api/auth/token', { ...opts, signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (r.status === 429) { showToast('Daily limit reached. Upgrade to Pro.'); isLoginSubmitting = false; setBtnLoading(document.getElementById('login-btn'), false); return; }
+    if (!r.ok) {
+      const ct = r.headers.get('content-type') || '';
+      const d = ct.includes('application/json') ? await r.json() : { detail: await r.text() };
+      showToast(d.detail || 'Error'); isLoginSubmitting = false; setBtnLoading(document.getElementById('login-btn'), false); return;
+    }
+    const data = await r.json();
+    token = data.access_token;
+    try { localStorage.setItem('opsbrief_token', token); } catch (e) { showToast('Unable to save login. Storage may be full.'); }
+    passwordEl.value = '';
+    await loadUser();
+  } catch(e) { clearTimeout(timeoutId); showToast('Network error'); }
+  isLoginSubmitting = false;
+  setBtnLoading(document.getElementById('login-btn'), false);
+}
+
+async function handleSignup() {
+  if (isSignupSubmitting) return;
+  isSignupSubmitting = true;
+  clearFieldErrors();
+  const email = document.getElementById('signup-email').value.trim();
+  const password = document.getElementById('signup-password').value;
+  const name = document.getElementById('signup-name').value.trim();
+  const ageChecked = document.getElementById('signup-age').checked;
+  const tosChecked = document.getElementById('signup-tos').checked;
+  if (!email) { showFieldError('signup-email', 'signup-email-error'); isSignupSubmitting = false; return; }
+  if (!password) { showFieldError('signup-password', 'signup-password-error'); isSignupSubmitting = false; return; }
+  if (password.length < 8) {
+    const err = document.getElementById('signup-password-error');
+    if (err) err.textContent = 'Password must be at least 8 characters';
+    showFieldError('signup-password', 'signup-password-error');
+    isSignupSubmitting = false;
+    return;
+  }
+  if (!name) { showFieldError('signup-name', 'signup-name-error'); isSignupSubmitting = false; return; }
+  if (!ageChecked) { showFieldError('signup-age', 'signup-age-error'); isSignupSubmitting = false; return; }
+  if (!tosChecked) { showFieldError('signup-tos', 'signup-tos-error'); isSignupSubmitting = false; return; }
+  setBtnLoading(document.getElementById('signup-btn'), true, 'Create Account');
+  const ok = await api('POST', '/api/auth/register', { email, password, name });
+  isSignupSubmitting = false;
+  setBtnLoading(document.getElementById('signup-btn'), false);
+  if (!ok) return;
+  showToast('Account created! Please sign in.');
+  showLogin();
+  document.getElementById('login-email').value = email;
+}
+
+async function loadUser() {
+  const data = await api('GET', '/api/auth/me');
+  if (!data) { logout(); return; }
+  user = data;
+  if (!user.preferences_json || user.preferences_json === '{}') {
+    showScreen('onboarding-screen');
+  } else {
+    const target = intendedScreen || 'briefing-screen';
+    showScreen(target);
+    if (target === 'briefing-screen') loadBriefing();
+    loadSaved();
+  }
+  document.getElementById('bottom-nav').style.display = 'flex';
+  document.getElementById('settings-email').textContent = user.email;
+  if (user.is_pro) {
+    document.getElementById('settings-plan').innerHTML = '<span class="pro-badge">PRO</span>';
+    document.getElementById('user-pro-badge').innerHTML = '<span class="pro-badge">PRO</span>';
+  }
+}
+
+function logout() {
+  token = null; user = null;
+  try { localStorage.removeItem('opsbrief_token'); } catch (e) {}
+  document.getElementById('settings-plan').textContent = 'Free';
+  document.getElementById('user-pro-badge').innerHTML = '';
+  selectedTech = [];
+  showScreen('login-screen'); document.getElementById('bottom-nav').style.display = 'none';
+}
+
+async function handleDeleteAccount() {
+  const confirmed = confirm('WARNING: This action is permanent and cannot be undone. All your data will be permanently deleted. Are you sure you want to delete your account?');
+  if (!confirmed) return;
+  const ok = await api('DELETE', '/api/auth/me');
+  if (!ok) return;
+  token = null; user = null;
+  try { localStorage.removeItem('opsbrief_token'); } catch (e) {}
+  showToast('Account deleted');
+  showScreen('login-screen');
+  document.getElementById('bottom-nav').style.display = 'none';
+}
+
+// ==================== ONBOARDING ====================
+const TECH_OPTIONS = [
+  { id: 'cisco', name: 'Cisco', emoji: '🟦' },
+  { id: 'juniper', name: 'Juniper', emoji: '🟩' },
+  { id: 'paloalto', name: 'Palo Alto', emoji: '🟨' },
+  { id: 'fortinet', name: 'Fortinet', emoji: '🔴' },
+  { id: 'aws', name: 'AWS', emoji: '🟧' },
+  { id: 'azure', name: 'Azure', emoji: '🔷' },
+  { id: 'gcp', name: 'GCP', emoji: '🔴' },
+  { id: 'kubernetes', name: 'Kubernetes', emoji: '☸️' },
+  { id: 'docker', name: 'Docker', emoji: '🐳' },
+  { id: 'linux', name: 'Linux', emoji: '🐧' },
+  { id: 'windows', name: 'Windows', emoji: '🪟' },
+  { id: 'vmware', name: 'VMware', emoji: '💻' },
+];
+let selectedTech = [];
+
+function renderTechStack() {
+  const grid = document.getElementById('tech-stack-grid');
+  const activeEl = document.activeElement;
+  const activeId = activeEl && activeEl.getAttribute ? activeEl.getAttribute('data-tech-id') : null;
+  grid.innerHTML = TECH_OPTIONS.map(t =>
+    `<div class="tech-item ${selectedTech.includes(t.id) ? 'selected' : ''}" onclick="toggleTech('${t.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleTech('${t.id}')}" role="button" tabindex="0" aria-pressed="${selectedTech.includes(t.id) ? 'true' : 'false'}" data-tech-id="${t.id}">
+      <span class="emoji" aria-hidden="true">${t.emoji}</span>${t.name}
+    </div>`
+  ).join('');
+  if (activeId) {
+    const toFocus = grid.querySelector('[data-tech-id="' + activeId + '"]');
+    if (toFocus) toFocus.focus();
+  }
+}
+function toggleTech(id) {
+  if (selectedTech.includes(id)) selectedTech = selectedTech.filter(x => x !== id);
+  else selectedTech.push(id);
+  renderTechStack();
+}
+function nextOnboarding() {
+  if (selectedTech.length === 0) { showToast('Select at least one'); return; }
+  document.getElementById('step-1').style.display = 'none';
+  document.getElementById('step-2').style.display = 'block';
+}
+async function finishOnboarding() {
+  if (isOnboardingSubmitting) return;
+  isOnboardingSubmitting = true;
+  setBtnLoading(document.getElementById('onboarding-btn'), true, 'Get Started');
+  const time = document.getElementById('notification-time').value;
+  const ok = await api('PUT', '/api/preferences', { tech_stack: selectedTech, severity_threshold: 'medium', sources: [], notification_time: time });
+  setBtnLoading(document.getElementById('onboarding-btn'), false);
+  isOnboardingSubmitting = false;
+  if (!ok) return;
+  showToast('Preferences saved!');
+  showScreen('briefing-screen'); loadBriefing(); loadSaved();
+}
+
+// ==================== BRIEFING ====================
+async function loadBriefing() {
+  if (briefingController) briefingController.abort();
+  briefingController = new AbortController();
+  try {
+    document.getElementById('briefing-date').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    const container = document.getElementById('briefing-content');
+    container.innerHTML = '<div class="briefing-skeleton" style="margin:8px 20px;"><div class="skeleton skeleton-badge"></div><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text skeleton-text-short"></div></div><div class="briefing-skeleton" style="margin:8px 20px;"><div class="skeleton skeleton-badge"></div><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text skeleton-text-short"></div></div><div class="briefing-skeleton" style="margin:8px 20px;"><div class="skeleton skeleton-badge"></div><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text skeleton-text-short"></div></div>';
+    const data = await api('GET', '/api/briefing/today', null, briefingController.signal);
+    if (!data) {
+      container.innerHTML = '';
+      const empty = document.createElement('div');
+      empty.className = 'briefing-empty';
+      const icon = document.createElement('div');
+      icon.className = 'icon';
+      icon.setAttribute('aria-hidden', 'true');
+      icon.textContent = '⚠️';
+      const h3 = document.createElement('h3');
+      h3.textContent = 'Unable to load briefing';
+      const p = document.createElement('p');
+      p.textContent = 'Network error. Please check your connection and try again.';
+      const retryBtn = document.createElement('button');
+      retryBtn.className = 'btn btn-primary';
+      retryBtn.style.marginTop = '16px';
+      retryBtn.style.width = 'auto';
+      retryBtn.type = 'button';
+      retryBtn.textContent = 'Retry';
+      retryBtn.onclick = loadBriefing;
+      empty.appendChild(icon);
+      empty.appendChild(h3);
+      empty.appendChild(p);
+      empty.appendChild(retryBtn);
+      container.appendChild(empty);
+      return;
+    }
+    if (!data.items || data.items.length === 0) {
+      container.innerHTML = '';
+      const empty = document.createElement('div');
+      empty.className = 'briefing-empty';
+      const icon = document.createElement('div');
+      icon.className = 'icon';
+      icon.setAttribute('aria-hidden', 'true');
+      icon.textContent = '✅';
+      const h3 = document.createElement('h3');
+      h3.textContent = 'All clear';
+      const p = document.createElement('p');
+      p.textContent = 'No relevant intel for your stack today.';
+      empty.appendChild(icon);
+      empty.appendChild(h3);
+      empty.appendChild(p);
+      container.appendChild(empty);
+      return;
+    }
+    container.innerHTML = '';
+    data.items.forEach(item => {
+      const article = document.createElement('article');
+      article.className = 'briefing-item';
+      article.setAttribute('tabindex', '0');
+      article.style.position = 'relative';
+      const intelId = String(item.intel_id);
+      const headline = String(item.headline);
+      const summary = String(item.summary);
+      article.onclick = () => saveBriefingItem(intelId, headline, summary);
+      article.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); saveBriefingItem(intelId, headline, summary); } };
+
+      const saveBtn = document.createElement('button');
+      saveBtn.type = 'button';
+      saveBtn.className = 'btn btn-sm';
+      saveBtn.setAttribute('aria-label', 'Save briefing: ' + item.headline);
+      saveBtn.style.cssText = 'position:absolute;right:16px;top:16px;width:auto;padding:6px 12px;font-size:12px;';
+      saveBtn.textContent = 'Save';
+      saveBtn.onclick = (e) => { e.stopPropagation(); saveBriefingItem(intelId, headline, summary); };
+      article.appendChild(saveBtn);
+
+      const header = document.createElement('div');
+      header.className = 'item-header';
+      const badge = document.createElement('span');
+      badge.className = 'badge badge-' + item.severity;
+      badge.textContent = item.severity;
+      const source = document.createElement('span');
+      source.style.fontSize = '12px';
+      source.style.color = 'var(--text-dim)';
+      source.textContent = (item.source || '').toUpperCase();
+      header.appendChild(badge);
+      header.appendChild(source);
+
+      const title = document.createElement('h3');
+      title.className = 'item-title';
+      title.textContent = item.headline;
+
+      const itemSummary = document.createElement('div');
+      itemSummary.className = 'item-summary';
+      itemSummary.textContent = item.summary;
+
+      const meta = document.createElement('div');
+      meta.className = 'item-meta';
+
+      const cvss = document.createElement('span');
+      const cvssIcon = document.createElement('span');
+      cvssIcon.setAttribute('aria-hidden', 'true');
+      cvssIcon.textContent = '📊';
+      cvss.appendChild(cvssIcon);
+      cvss.appendChild(document.createTextNode(' CVSS ' + (item.cvss_score != null ? item.cvss_score : 'N/A')));
+      meta.appendChild(cvss);
+
+      const relevance = document.createElement('span');
+      const relIcon = document.createElement('span');
+      relIcon.setAttribute('aria-hidden', 'true');
+      relIcon.textContent = '⭐';
+      relevance.appendChild(relIcon);
+      relevance.appendChild(document.createTextNode(' ' + (item.relevance_score || '0') + '% match'));
+      meta.appendChild(relevance);
+
+      if (item.url && /^https?:\/\//i.test(item.url)) {
+        const urlSpan = document.createElement('span');
+        const link = document.createElement('a');
+        link.href = item.url;
+        link.target = '_blank';
+        link.setAttribute('aria-label', 'Details (opens in new tab)');
+        link.style.color = 'var(--accent)';
+        link.textContent = 'Details';
+        link.onclick = (e) => e.stopPropagation();
+        urlSpan.appendChild(document.createTextNode('🔗 '));
+        urlSpan.appendChild(link);
+        meta.appendChild(urlSpan);
+      }
+
+      article.appendChild(header);
+      article.appendChild(title);
+      article.appendChild(itemSummary);
+      article.appendChild(meta);
+      container.appendChild(article);
+    });
+  } finally {
+    briefingController = null;
+  }
+}
+async function saveBriefingItem(intelId, headline, summary) {
+  const ok = await api('POST', '/api/intel/save', { title: headline, content: summary, source: 'briefing', intel_id: intelId, tags: ['briefing'] });
+  if (ok) showToast('Saved!', intelId);
+}
+async function undoSave(intelId) {
+  const items = await api('GET', '/api/intel/saved');
+  if (!items) return;
+  const match = items.find(i => String(i.intel_id) === String(intelId));
+  if (match) await api('DELETE', '/api/intel/saved/' + encodeURIComponent(match.id));
+  loadSaved();
+}
+
+// ==================== CHAT ====================
+const chatMessages = document.getElementById('chat-messages');
+async function sendChat() {
+  if (isChatSubmitting) return;
+  isChatSubmitting = true;
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim(); if (!msg) { isChatSubmitting = false; return; }
+  input.value = '';
+  addMessage('user', msg);
+  setBtnLoading(document.getElementById('send-btn'), true, '➤');
+  const data = await api('POST', '/api/chat', { message: msg });
+  setBtnLoading(document.getElementById('send-btn'), false);
+  isChatSubmitting = false;
+  if (!data) { addMessage('assistant', 'Sorry, I could not process that request.'); return; }
+  addMessage('assistant', (data.answer !== undefined && data.answer !== null) ? data.answer : 'Sorry, I could not process that.');
+}
+function addMessage(role, content) {
+  const welcome = chatMessages.querySelector('.chat-welcome');
+  if (welcome) welcome.remove();
+  if (chatMessages.children.length > 100) {
+    chatMessages.removeChild(chatMessages.firstElementChild);
+  }
+  const div = document.createElement('div');
+  div.className = 'chat-message ' + role;
+  const textSpan = document.createElement('span');
+  const lines = content.split('\n');
+  lines.forEach((line, i) => {
+    textSpan.appendChild(document.createTextNode(line));
+    if (i < lines.length - 1) textSpan.appendChild(document.createElement('br'));
+  });
+  div.appendChild(textSpan);
+  const ts = document.createElement('div');
+  ts.className = 'timestamp';
+  ts.textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+  div.appendChild(ts);
+  chatMessages.appendChild(div);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// ==================== SAVED ====================
+async function loadSaved() {
+  if (savedController) savedController.abort();
+  savedController = new AbortController();
+  try {
+    const data = await api('GET', '/api/intel/saved', null, savedController.signal);
+    const container = document.getElementById('saved-content');
+    if (!data || data.length === 0) {
+      container.innerHTML = '';
+      const empty = document.createElement('div');
+      empty.className = 'briefing-empty';
+      empty.style.padding = '40px 20px';
+      const icon = document.createElement('div');
+      icon.className = 'icon';
+      icon.style.fontSize = '40px';
+      icon.setAttribute('aria-hidden', 'true');
+      icon.textContent = '🔖';
+      const h3 = document.createElement('h3');
+      h3.textContent = 'No saved intel yet';
+      const p = document.createElement('p');
+      p.textContent = 'Save items from your briefing to build your knowledge base.';
+      empty.appendChild(icon);
+      empty.appendChild(h3);
+      empty.appendChild(p);
+      container.appendChild(empty);
+      return;
+    }
+    container.innerHTML = '';
+    data.forEach(item => {
+      const article = document.createElement('article');
+      article.className = 'saved-item';
+      const title = document.createElement('h3');
+      title.className = 'item-title';
+      title.textContent = item.title;
+      const content = document.createElement('div');
+      content.className = 'item-content';
+      content.textContent = item.content;
+      const tags = document.createElement('div');
+      tags.className = 'item-tags';
+      if (Array.isArray(item.tags)) {
+        item.tags.forEach(t => {
+          const tag = document.createElement('span');
+          tag.className = 'tag';
+          tag.textContent = t;
+          tags.appendChild(tag);
+        });
+      }
+      article.appendChild(title);
+      article.appendChild(content);
+      article.appendChild(tags);
+      container.appendChild(article);
+    });
+  } finally {
+    savedController = null;
+  }
+}
+
+// ==================== PULL TO REFRESH ====================
+(function setupPullToRefresh() {
+  const container = document.getElementById('briefing-content');
+  if (!container) return;
+  let startY = 0;
+  let isPulling = false;
+  container.addEventListener('touchstart', e => {
+    if (window.scrollY === 0) {
+      startY = e.touches[0].clientY;
+      isPulling = true;
+    }
+  }, { passive: true });
+  container.addEventListener('touchmove', e => {
+    if (!isPulling) return;
+    const y = e.touches[0].clientY;
+    const diff = y - startY;
+    if (diff > 50) {
+      const ptr = document.getElementById('ptr-indicator');
+      if (ptr) ptr.style.display = 'block';
+    }
+  }, { passive: true });
+  container.addEventListener('touchend', e => {
+    if (!isPulling) return;
+    isPulling = false;
+    const y = e.changedTouches[0].clientY;
+    const diff = y - startY;
+    const ptr = document.getElementById('ptr-indicator');
+    if (ptr) ptr.style.display = 'none';
+    if (diff > 100 && window.scrollY === 0) {
+      loadBriefing();
+    }
+  }, { passive: true });
+})();
+
+// ==================== CAPACITOR BACK BUTTON ====================
+document.addEventListener('deviceready', () => {
+  if (window.Capacitor) {
+    const App = window.Capacitor.Plugins.App;
+    if (App) {
+      App.addListener('backButton', ({canGoBack}) => {
+        if (canGoBack) {
+          window.history.back();
+        } else {
+          App.exitApp();
+        }
+      });
+    }
+  }
+});
+
+// ==================== INIT ====================
+window.addEventListener('popstate', e => { if (e.state && e.state.screen) showScreen(e.state.screen, true); });
+renderTechStack();
+if (window.location.hash) {
+  const hash = window.location.hash.slice(1);
+  if (hash && document.getElementById(hash)) intendedScreen = hash;
+}
+if (token) { loadUser(); } else { showScreen('login-screen'); }
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">OpsBrief</string>
+    <string name="title_activity_main">OpsBrief</string>
+    <string name="package_name">com.opsbrief.app</string>
+    <string name="custom_url_scheme">com.opsbrief.app</string>
+</resources>
