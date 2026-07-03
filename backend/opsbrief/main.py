@@ -304,8 +304,12 @@ class UserOut(BaseModel):
     email: str
     name: str | None
     is_pro: bool
+    is_team: bool = False
+    plan: str | None = None
     daily_briefings_used: int
     daily_chats_used: int
+    daily_chats_limit: int | None = None
+    saved_intel_limit: int | None = None
 
     class Config:
         from_attributes = True
@@ -565,6 +569,19 @@ def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db
 
 @app.get("/api/auth/me", response_model=UserOut, tags=["auth"])
 def me(current_user: User = Depends(get_current_user)):
+    if settings.FREE_MODE:
+        return {
+            "id": current_user.id,
+            "email": current_user.email,
+            "name": current_user.name,
+            "is_pro": True,
+            "is_team": True,
+            "plan": "Pro (Guest Demo)",
+            "daily_briefings_used": 0,
+            "daily_chats_used": 0,
+            "daily_chats_limit": 9999,
+            "saved_intel_limit": 9999,
+        }
     return current_user
 
 
@@ -975,6 +992,13 @@ def delete_saved_intel(item_id: str, current_user: User = Depends(get_current_us
 
 @app.get("/api/preferences", response_model=PreferencesOut, tags=["preferences"])
 def get_preferences(current_user: User = Depends(get_current_user)):
+    if settings.FREE_MODE:
+        return {
+            "tech_stack": ["cisco", "aws", "linux"],
+            "severity_threshold": "medium",
+            "sources": ["nvd", "github", "cisco"],
+            "notification_time": "08:00",
+        }
     try:
         prefs = json.loads(current_user.preferences_json or "{}")
     except json.JSONDecodeError:

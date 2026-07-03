@@ -162,7 +162,7 @@ html { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 /* Specific screens */
 
 /* Login */
-#login-screen { display: flex; flex-direction: column; justify-content: center; min-height: 100vh; padding: 40px 24px; }
+#login-screen { display: none; flex-direction: column; justify-content: center; min-height: 100vh; padding: 40px 24px; }
 .login-logo { text-align: center; margin-bottom: 40px; }
 .login-logo .logo-icon { width: 64px; height: 64px; border-radius: 20px; margin: 0 auto 16px; font-size: 28px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--accent), var(--accent-glow)); }
 .login-logo h1, .login-logo h2 { font-size: 24px; font-weight: 800; margin-bottom: 8px; }
@@ -172,6 +172,9 @@ html { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 .login-form label { font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
 .login-form .toggle { text-align: center; margin-top: 8px; color: var(--text-muted); font-size: 14px; }
 .login-form .toggle a { color: var(--accent); font-weight: 600; cursor: pointer; }
+
+/* Guest demo banner */
+#guest-demo-banner { background: linear-gradient(90deg, var(--accent), var(--accent-glow)); color: #fff; text-align: center; padding: 10px 16px; font-size: 13px; font-weight: 600; }
 
 /* Onboarding */
 .onboarding-step { padding: 20px; }
@@ -317,6 +320,9 @@ window.addEventListener('online', () => { if (typeof showToast === 'function') s
 <!-- Toast -->
 <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
+<!-- Guest Demo Banner -->
+<div id="guest-demo-banner" style="display:none;">🎁 Guest Demo — All Pro features unlocked. Sign up to save your data.</div>
+
 <!-- ==================== LOGIN SCREEN ==================== -->
 <section id="login-screen" class="screen">
   <div class="login-logo">
@@ -325,10 +331,10 @@ window.addEventListener('online', () => { if (typeof showToast === 'function') s
     <p>Daily intelligence for IT professionals</p>
   </div>
   <form id="login-form" class="login-form" onsubmit="handleLogin(); return false;">
-    <div class="form-group"><label for="login-email">Email</label><input type="email" id="login-email" placeholder="you@company.com" value="" autocomplete="email" autocapitalize="none" autocorrect="off" maxlength="254" enterkeyhint="next" required aria-required="true"><span class="field-error" aria-live="polite" id="login-email-error">Email is required</span></div>
-    <div class="form-group"><label for="login-password">Password</label><div style="display:flex;gap:8px;align-items:center;"><input type="password" id="login-password" placeholder="••••••••" value="" autocomplete="current-password" maxlength="128" style="flex:1" required aria-required="true"><button type="button" class="btn btn-outline btn-sm" onclick="togglePassword('login-password')" aria-label="Toggle password visibility" style="width:auto"><span aria-hidden="true">👁</span></button></div><span class="field-error" aria-live="polite" id="login-password-error">Password is required</span></div>
+    <div class="form-group"><label for="login-email">Email</label><input type="email" id="login-email" placeholder="you@company.com" value="" autocomplete="off" autocapitalize="none" autocorrect="off" maxlength="254" enterkeyhint="next" required aria-required="true"><span class="field-error" aria-live="polite" id="login-email-error">Email is required</span></div>
+    <div class="form-group"><label for="login-password">Password</label><div style="display:flex;gap:8px;align-items:center;"><input type="password" id="login-password" placeholder="••••••••" value="" autocomplete="off" maxlength="128" style="flex:1" required aria-required="true"><button type="button" class="btn btn-outline btn-sm" onclick="togglePassword('login-password')" aria-label="Toggle password visibility" style="width:auto"><span aria-hidden="true">👁</span></button></div><span class="field-error" aria-live="polite" id="login-password-error">Password is required</span></div>
     <button type="submit" class="btn btn-primary" id="login-btn">Sign In</button>
-    <div class="toggle">New here? <button type="button" style="background:none;border:none;color:var(--accent);font-weight:600;cursor:pointer;font-size:inherit;font-family:inherit;padding:0" onclick="showSignup()">Create account</button></div>
+    <div class="toggle" id="login-toggle">New here? <button type="button" style="background:none;border:none;color:var(--accent);font-weight:600;cursor:pointer;font-size:inherit;font-family:inherit;padding:0" onclick="showSignup()">Create account</button></div>
   </form>
   <form id="signup-form" class="login-form" style="display:none" onsubmit="handleSignup(); return false;">
     <div class="form-group"><label for="signup-email">Email</label><input type="email" id="signup-email" placeholder="you@company.com" autocomplete="email" autocapitalize="none" autocorrect="off" maxlength="254" required aria-required="true"><span class="field-error" aria-live="polite" id="signup-email-error">Email is required</span></div>
@@ -416,9 +422,10 @@ window.addEventListener('online', () => { if (typeof showToast === 'function') s
       <div class="chat-welcome"><h3>Ask OpsBrief</h3><p>Try: "Any critical CVEs for Cisco?"</p></div>
     </div>
     <div class="chat-input-bar">
-      <input type="text" id="chat-input" placeholder="Ask about a CVE, config, or vulnerability..." onkeydown="if(event.key==='Enter')sendChat()" enterkeyhint="send" maxlength="500" aria-label="Ask OpsBrief a question">
+      <input type="text" id="chat-input" placeholder="Ask about a CVE, config, or vulnerability..." onkeydown="if(event.key==='Enter')sendChat()" enterkeyhint="send" maxlength="1000" aria-label="Ask OpsBrief a question">
       <button type="button" onclick="sendChat()" id="send-btn" aria-label="Send message"><span aria-hidden="true">➤</span></button>
     </div>
+    <div id="chat-guest-mode" style="display:none; text-align:center; font-size:12px; color:var(--text-muted); padding:4px 0;">Guest mode — unlimited</div>
   </div>
 </section>
 
@@ -446,7 +453,10 @@ window.addEventListener('online', () => { if (typeof showToast === 'function') s
     <div class="settings-row" onclick="openExternal('https://photon-bounce.com/privacy-policy/')" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openExternal('https://photon-bounce.com/privacy-policy/')}" style="cursor:pointer" role="link"><span class="label">Privacy Policy</span><span class="value">→</span></div>
     <div class="settings-row" onclick="openExternal('https://photon-bounce.com/terms-of-service/')" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openExternal('https://photon-bounce.com/terms-of-service/')}" style="cursor:pointer" role="link"><span class="label">Terms of Service</span><span class="value">→</span></div>
   </div>
-  <!-- Sign Out and Delete Account removed in free mode -->
+  <div class="settings-group" id="settings-account-actions" style="display:none;">
+    <button type="button" class="btn btn-outline" onclick="logout()">Sign Out</button>
+    <button type="button" class="btn btn-danger" onclick="handleDeleteAccount()" style="margin-top:10px">Delete Account</button>
+  </div>
 </section>
 
 <!-- Bottom Navigation -->
@@ -492,7 +502,8 @@ const DEMO_USER = {
   id: '00000000-0000-0000-0000-000000000000',
   email: 'demo@opsbrief.local',
   name: 'Demo User',
-  is_pro: false,
+  is_pro: true,
+  is_team: true,
   daily_briefings_used: 0,
   daily_chats_used: 0,
   preferences_json: '{}' // empty so onboarding shows first
@@ -732,13 +743,13 @@ async function loadUser() {
     }
     document.getElementById('bottom-nav').style.display = 'flex';
     document.getElementById('settings-email').textContent = user.email;
-    if (user.is_pro) {
-      document.getElementById('settings-plan').innerHTML = '<span class="pro-badge">PRO</span>';
-      document.getElementById('user-pro-badge').innerHTML = '<span class="pro-badge">PRO</span>';
-    } else {
-      document.getElementById('settings-plan').textContent = 'Free';
-      document.getElementById('user-pro-badge').innerHTML = '';
-    }
+    document.getElementById('settings-plan').innerHTML = '<span class="pro-badge">PRO</span> (Guest Demo)';
+    document.getElementById('user-pro-badge').innerHTML = '<span class="pro-badge">PRO</span>';
+    document.getElementById('guest-demo-banner').style.display = 'block';
+    document.getElementById('chat-guest-mode').style.display = 'block';
+    document.getElementById('login-btn').style.display = 'none';
+    document.getElementById('login-toggle').style.display = 'none';
+    document.getElementById('settings-account-actions').style.display = 'none';
     return;
   }
   const data = await api('GET', '/api/auth/me');
@@ -754,9 +765,15 @@ async function loadUser() {
   }
   document.getElementById('bottom-nav').style.display = 'flex';
   document.getElementById('settings-email').textContent = user.email;
+  document.getElementById('guest-demo-banner').style.display = 'none';
+  document.getElementById('chat-guest-mode').style.display = 'none';
+  document.getElementById('settings-account-actions').style.display = 'block';
   if (user.is_pro) {
     document.getElementById('settings-plan').innerHTML = '<span class="pro-badge">PRO</span>';
     document.getElementById('user-pro-badge').innerHTML = '<span class="pro-badge">PRO</span>';
+  } else {
+    document.getElementById('settings-plan').textContent = 'Free';
+    document.getElementById('user-pro-badge').innerHTML = '';
   }
 }
 
@@ -769,6 +786,8 @@ function logout() {
   try { localStorage.removeItem('opsbrief_token'); } catch (e) {}
   document.getElementById('settings-plan').textContent = 'Free';
   document.getElementById('user-pro-badge').innerHTML = '';
+  document.getElementById('guest-demo-banner').style.display = 'none';
+  document.getElementById('chat-guest-mode').style.display = 'none';
   selectedTech = [];
   showScreen('login-screen'); document.getElementById('bottom-nav').style.display = 'none';
 }
@@ -1147,6 +1166,7 @@ if (window.location.hash) {
 }
 if (FREE_MODE) {
   // In free mode, skip auth entirely and go straight to the app
+  document.getElementById('login-screen').style.display = 'none';
   loadUser();
 } else if (token) {
   loadUser();
