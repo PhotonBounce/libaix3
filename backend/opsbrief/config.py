@@ -57,7 +57,14 @@ class Settings(BaseSettings):
     FREE_DAILY_CHATS: int = 5
     FREE_SAVED_ITEMS: int = 50
     PRO_PRICE_MONTHLY: int = 999  # cents, i.e. $9.99
+    VIP_PRICE_YEARLY_CENTS: int = 200  # $2.00/year
+    TRIAL_DURATION_DAYS: int = 7  # 1-week free trial
     MAX_ITEMS_PER_SOURCE: int = 500
+
+    # ── VIP Tier Limits ─────────────────────────────────────────────────
+    VIP_DAILY_BRIEFINGS: int = 3
+    VIP_DAILY_CHATS: int = 50
+    VIP_SAVED_ITEMS: int = 500
 
     # ── CORS ────────────────────────────────────────────────────────────
     CORS_ORIGINS: str = os.environ.get("CORS_ORIGINS", "")

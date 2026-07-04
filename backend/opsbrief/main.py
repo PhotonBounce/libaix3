@@ -77,7 +77,9 @@ def get_or_create_demo_user(db: Session) -> User:
             email=settings.DEMO_USER_EMAIL,
             password_hash="",  # no password for demo user
             name=settings.DEMO_USER_NAME,
-            is_pro=0,
+            is_pro=1,
+            subscription_tier="vip",
+            subscription_status="active",
             preferences_json=json.dumps({
                 "tech_stack": ["cisco", "aws", "linux"],
                 "severity_threshold": "medium",
@@ -272,6 +274,30 @@ def _reset_counters_if_needed(user_id: str, db: Session) -> User:
     return user
 
 
+def get_user_limits(user: User) -> dict[str, int]:
+    """Return usage limits based on user's subscription tier."""
+    if user.is_vip:
+        return {
+            "daily_briefings": settings.VIP_DAILY_BRIEFINGS,
+            "daily_chats": settings.VIP_DAILY_CHATS,
+            "saved_items": settings.VIP_SAVED_ITEMS,
+        }
+    return {
+        "daily_briefings": settings.FREE_DAILY_BRIEFINGS,
+        "daily_chats": settings.FREE_DAILY_CHATS,
+        "saved_items": settings.FREE_SAVED_ITEMS,
+    }
+
+
+def _make_aware(dt: datetime | None) -> datetime | None:
+    """Ensure a datetime is timezone-aware (UTC) for safe comparisons."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
 # ── Pydantic Schemas ─────────────────────────────────────────────────
 
 class RegisterRequest(BaseModel):
@@ -308,8 +334,20 @@ class UserOut(BaseModel):
     plan: str | None = None
     daily_briefings_used: int
     daily_chats_used: int
+    daily_briefings_limit: int | None = None
     daily_chats_limit: int | None = None
     saved_intel_limit: int | None = None
+    # Subscription fields
+    subscription_tier: str | None = None
+    subscription_status: str | None = None
+    trial_started_at: str | None = None
+    trial_ends_at: str | None = None
+    subscription_started_at: str | None = None
+    subscription_ends_at: str | None = None
+    subscription_renews_at: str | None = None
+    cancelled_at: str | None = None
+    is_trial_active: bool = False
+    is_vip_active: bool = False
 
     class Config:
         from_attributes = True
@@ -429,6 +467,12 @@ class AdminUserItem(BaseModel):
     email: str
     name: str | None
     is_pro: bool
+    subscription_tier: str | None = None
+    subscription_status: str | None = None
+    trial_ends_at: str | None = None
+    subscription_ends_at: str | None = None
+    stripe_customer_id: str | None = None
+    paypal_subscription_id: str | None = None
     created_at: str | None
     daily_chats_used: int
 
@@ -539,6 +583,8 @@ def register(req: RegisterRequest, db: Session = Depends(get_db), _rate_limit: N
         email=req.email,
         password_hash=hash_password(req.password),
         name=req.name,
+        subscription_tier="free",
+        subscription_status="none",
     )
     db.add(user)
     try:
@@ -576,13 +622,56 @@ def me(current_user: User = Depends(get_current_user)):
             "name": current_user.name,
             "is_pro": True,
             "is_team": True,
-            "plan": "Pro (Guest Demo)",
+            "plan": "VIP (Guest Demo)",
             "daily_briefings_used": 0,
             "daily_chats_used": 0,
+            "daily_briefings_limit": 9999,
             "daily_chats_limit": 9999,
             "saved_intel_limit": 9999,
+            "subscription_tier": "vip",
+            "subscription_status": "active",
+            "trial_started_at": None,
+            "trial_ends_at": None,
+            "subscription_started_at": None,
+            "subscription_ends_at": None,
+            "subscription_renews_at": None,
+            "cancelled_at": None,
+            "is_trial_active": False,
+            "is_vip_active": True,
         }
-    return current_user
+    # Build subscription booleans
+    now = datetime.now(timezone.utc)
+    trial_ends = _make_aware(current_user.trial_ends_at)
+    is_trial_active = bool(
+        current_user.subscription_status == "trialing"
+        and trial_ends
+        and trial_ends > now
+    )
+    is_vip_active = current_user.is_vip or bool(current_user.is_pro)
+    limits = get_user_limits(current_user)
+    return {
+        "id": str(current_user.id),
+        "email": current_user.email,
+        "name": current_user.name,
+        "is_pro": is_vip_active,
+        "is_team": is_vip_active,
+        "plan": "Trial" if is_trial_active else ("VIP" if is_vip_active else "Free"),
+        "daily_briefings_used": current_user.daily_briefings_used,
+        "daily_chats_used": current_user.daily_chats_used,
+        "daily_briefings_limit": limits["daily_briefings"],
+        "daily_chats_limit": limits["daily_chats"],
+        "saved_intel_limit": limits["saved_items"],
+        "subscription_tier": current_user.subscription_tier or "free",
+        "subscription_status": current_user.subscription_status or "none",
+        "trial_started_at": current_user.trial_started_at.isoformat() if current_user.trial_started_at else None,
+        "trial_ends_at": current_user.trial_ends_at.isoformat() if current_user.trial_ends_at else None,
+        "subscription_started_at": current_user.subscription_started_at.isoformat() if current_user.subscription_started_at else None,
+        "subscription_ends_at": current_user.subscription_ends_at.isoformat() if current_user.subscription_ends_at else None,
+        "subscription_renews_at": current_user.subscription_renews_at.isoformat() if current_user.subscription_renews_at else None,
+        "cancelled_at": current_user.cancelled_at.isoformat() if current_user.cancelled_at else None,
+        "is_trial_active": is_trial_active,
+        "is_vip_active": is_vip_active,
+    }
 
 
 @app.post("/api/auth/refresh", response_model=TokenResponse, tags=["auth"])
@@ -672,6 +761,15 @@ def export_user_data(response: Response, current_user: User = Depends(get_curren
         "email": current_user.email,
         "name": current_user.name,
         "is_pro": bool(current_user.is_pro),
+        "subscription_tier": current_user.subscription_tier,
+        "subscription_status": current_user.subscription_status,
+        "trial_ends_at": current_user.trial_ends_at.isoformat() if current_user.trial_ends_at else None,
+        "subscription_ends_at": current_user.subscription_ends_at.isoformat() if current_user.subscription_ends_at else None,
+        "subscription_renews_at": current_user.subscription_renews_at.isoformat() if current_user.subscription_renews_at else None,
+        "cancelled_at": current_user.cancelled_at.isoformat() if current_user.cancelled_at else None,
+        "stripe_customer_id": current_user.stripe_customer_id,
+        "stripe_subscription_id": current_user.stripe_subscription_id,
+        "paypal_subscription_id": current_user.paypal_subscription_id,
         "created_at": current_user.created_at.isoformat() if current_user.created_at else None,
         "pro_expires_at": current_user.pro_expires_at.isoformat() if current_user.pro_expires_at else None,
     }
@@ -825,6 +923,13 @@ def get_today_briefing(current_user: User = Depends(get_current_user), db: Sessi
                 sent_at=None,
             )
         raise HTTPException(status_code=404, detail="Briefing not ready yet. Check back later.")
+    # Check daily briefing limit and increment counter
+    if not settings.FREE_MODE:
+        limits = get_user_limits(current_user)
+        fresh_user = db.query(User).filter(User.id == current_user.id).first()
+        if not fresh_user.is_vip and fresh_user.daily_briefings_used >= limits["daily_briefings"]:
+            raise HTTPException(status_code=429, detail=f"Daily briefing limit reached. Upgrade to VIP for {settings.VIP_DAILY_BRIEFINGS} briefings/day.")
+        fresh_user.daily_briefings_used += 1
     # Mark as read
     briefing.is_read = 1
     db.commit()
@@ -883,12 +988,12 @@ async def chat(req: ChatRequest, request: Request, current_user: User = Depends(
             .values(daily_chats_used=User.daily_chats_used + 1)
         )
         db.flush()
-        db.expire(current_user)
         # Re-query from the same session to read the updated counter
         fresh_user = db.query(User).filter(User.id == current_user.id).first()
-        if not fresh_user.is_pro and fresh_user.daily_chats_used > settings.FREE_DAILY_CHATS:
+        limits = get_user_limits(fresh_user)
+        if not fresh_user.is_vip and fresh_user.daily_chats_used > limits["daily_chats"]:
             db.rollback()
-            raise HTTPException(status_code=429, detail="Daily chat limit reached. Upgrade to Pro.")
+            raise HTTPException(status_code=429, detail=f"Daily chat limit reached. Upgrade to VIP for {settings.VIP_DAILY_CHATS} chats/day.")
 
     try:
         from .services.llm_service import query_with_context
@@ -926,8 +1031,9 @@ async def chat(req: ChatRequest, request: Request, current_user: User = Depends(
 def save_intel(req: SavedItemCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not settings.FREE_MODE:
         count = db.query(SavedItem).filter(SavedItem.user_id == current_user.id).count()
-        if not current_user.is_pro and count >= settings.FREE_SAVED_ITEMS:
-            raise HTTPException(status_code=429, detail="Saved item limit reached. Upgrade to Pro.")
+        limits = get_user_limits(current_user)
+        if not current_user.is_vip and count >= limits["saved_items"]:
+            raise HTTPException(status_code=429, detail=f"Saved item limit reached. Upgrade to VIP for {settings.VIP_SAVED_ITEMS} items.")
 
     # Validate foreign key if provided
     if req.intel_id is not None:
@@ -986,6 +1092,168 @@ def delete_saved_intel(item_id: str, current_user: User = Depends(get_current_us
     db.delete(item)
     db.commit()
     return {"status": "deleted"}
+
+
+# ── Subscription Routes ──────────────────────────────────────────────
+
+class SubscriptionStatusOut(BaseModel):
+    status: str  # none, trialing, active, cancelled, past_due
+    tier: str  # free, vip
+    is_trial_active: bool
+    is_vip_active: bool
+    trial_ends_at: str | None = None
+    subscription_ends_at: str | None = None
+    subscription_renews_at: str | None = None
+    cancelled_at: str | None = None
+    days_remaining: int | None = None
+    price_yearly_cents: int
+    limits: dict
+
+
+class StartTrialOut(BaseModel):
+    success: bool
+    message: str
+    trial_ends_at: str | None = None
+
+
+class SubscriptionUpgradeRequest(BaseModel):
+    payment_method: str = Field(pattern="^(stripe|paypal)$")
+
+
+class UpgradeOut(BaseModel):
+    success: bool
+    message: str
+    checkout_url: str | None = None
+    payment_method: str | None = None
+
+
+@app.get("/api/subscription/status", response_model=SubscriptionStatusOut, tags=["subscription"])
+def subscription_status(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if settings.FREE_MODE:
+        return {
+            "status": "active",
+            "tier": "vip",
+            "is_trial_active": False,
+            "is_vip_active": True,
+            "trial_ends_at": None,
+            "subscription_ends_at": None,
+            "subscription_renews_at": None,
+            "cancelled_at": None,
+            "days_remaining": None,
+            "price_yearly_cents": settings.VIP_PRICE_YEARLY_CENTS,
+            "limits": {"daily_briefings": 9999, "daily_chats": 9999, "saved_items": 9999},
+        }
+    now = datetime.now(timezone.utc)
+    user = db.query(User).filter(User.id == current_user.id).first()
+    status = user.subscription_status or "none"
+    tier = user.subscription_tier or "free"
+    trial_ends = _make_aware(user.trial_ends_at)
+    sub_ends = _make_aware(user.subscription_ends_at)
+    is_trial_active = bool(
+        status == "trialing" and trial_ends and trial_ends > now
+    )
+    is_vip_active = user.is_vip or bool(user.is_pro)
+    days_remaining = None
+    if is_trial_active and trial_ends:
+        days_remaining = max(0, (trial_ends - now).days)
+    elif is_vip_active and sub_ends:
+        days_remaining = max(0, (sub_ends - now).days)
+    limits = get_user_limits(user)
+    return {
+        "status": status,
+        "tier": tier,
+        "is_trial_active": is_trial_active,
+        "is_vip_active": is_vip_active,
+        "trial_ends_at": user.trial_ends_at.isoformat() if user.trial_ends_at else None,
+        "subscription_ends_at": user.subscription_ends_at.isoformat() if user.subscription_ends_at else None,
+        "subscription_renews_at": user.subscription_renews_at.isoformat() if user.subscription_renews_at else None,
+        "cancelled_at": user.cancelled_at.isoformat() if user.cancelled_at else None,
+        "days_remaining": days_remaining,
+        "price_yearly_cents": settings.VIP_PRICE_YEARLY_CENTS,
+        "limits": limits,
+    }
+
+
+@app.post("/api/subscription/start-trial", response_model=StartTrialOut, tags=["subscription"])
+def start_trial(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if settings.FREE_MODE:
+        return {"success": True, "message": "Trial started (demo mode)", "trial_ends_at": None}
+    user = db.query(User).filter(User.id == current_user.id).first()
+    # Only allow trial if currently free and never had one
+    if user.subscription_tier == "vip" and user.is_vip:
+        raise HTTPException(status_code=400, detail="You already have an active VIP subscription.")
+    if user.trial_started_at is not None:
+        raise HTTPException(status_code=400, detail="Trial already used.")
+    now = datetime.now(timezone.utc)
+    trial_end = now + timedelta(days=settings.TRIAL_DURATION_DAYS)
+    user.subscription_tier = "vip"
+    user.subscription_status = "trialing"
+    user.trial_started_at = now
+    user.trial_ends_at = trial_end
+    user.subscription_ends_at = trial_end
+    db.commit()
+    return {
+        "success": True,
+        "message": f"Your {settings.TRIAL_DURATION_DAYS}-day VIP trial has started!",
+        "trial_ends_at": trial_end.isoformat(),
+    }
+
+
+@app.post("/api/subscription/upgrade", response_model=UpgradeOut, tags=["subscription"])
+def upgrade_vip(req: SubscriptionUpgradeRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if settings.FREE_MODE:
+        return {"success": True, "message": "Upgraded to VIP (demo mode)", "checkout_url": None, "payment_method": req.payment_method}
+    user = db.query(User).filter(User.id == current_user.id).first()
+    now = datetime.now(timezone.utc)
+    # If already active VIP, block double-upgrade
+    trial_ends = _make_aware(user.trial_ends_at)
+    if user.subscription_tier == "vip" and user.is_vip and user.subscription_status == "active":
+        raise HTTPException(status_code=400, detail="You already have an active VIP subscription.")
+    # If on trial, keep trial end date and extend subscription from there
+    base_date = trial_ends if trial_ends and trial_ends > now else now
+    sub_end = base_date + timedelta(days=365)
+    user.subscription_tier = "vip"
+    user.subscription_status = "active"
+    user.subscription_started_at = now
+    user.subscription_ends_at = sub_end
+    user.subscription_renews_at = sub_end
+    user.is_pro = 1
+    if req.payment_method == "stripe":
+        user.stripe_customer_id = f"cus_mock_{user.id}"
+        user.stripe_subscription_id = f"sub_mock_{user.id}"
+    elif req.payment_method == "paypal":
+        user.paypal_subscription_id = f"paypal_mock_{user.id}"
+    db.commit()
+    return {
+        "success": True,
+        "message": "Welcome to VIP! Your subscription is active.",
+        "checkout_url": None,  # In production, return a Stripe/PayPal checkout URL
+        "payment_method": req.payment_method,
+    }
+
+
+class CancelOut(BaseModel):
+    status: str
+    effective_until: str | None = None
+
+
+@app.post("/api/subscription/cancel", response_model=CancelOut, tags=["subscription"])
+def cancel_subscription(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if settings.FREE_MODE:
+        return {"status": "cancelled", "effective_until": None}
+    user = db.query(User).filter(User.id == current_user.id).first()
+    if user.subscription_tier != "vip":
+        raise HTTPException(status_code=400, detail="No active VIP subscription to cancel.")
+    if user.subscription_status == "cancelled":
+        raise HTTPException(status_code=400, detail="Subscription already cancelled.")
+    now = datetime.now(timezone.utc)
+    user.subscription_status = "cancelled"
+    user.cancelled_at = now
+    db.commit()
+    return {
+        "status": "cancelled",
+        "effective_until": user.subscription_ends_at.isoformat() if user.subscription_ends_at else None,
+    }
 
 
 # ── Preferences Routes ───────────────────────────────────────────────
@@ -1107,7 +1375,13 @@ def admin_users(request: Request, limit: int = Query(50, ge=0, le=100), offset: 
             "id": str(u.id),
             "email": u.email,
             "name": u.name,
-            "is_pro": bool(u.is_pro),
+            "is_pro": u.is_vip or bool(u.is_pro),
+            "subscription_tier": u.subscription_tier or "free",
+            "subscription_status": u.subscription_status or "none",
+            "trial_ends_at": u.trial_ends_at.isoformat() if u.trial_ends_at else None,
+            "subscription_ends_at": u.subscription_ends_at.isoformat() if u.subscription_ends_at else None,
+            "stripe_customer_id": u.stripe_customer_id,
+            "paypal_subscription_id": u.paypal_subscription_id,
             "created_at": u.created_at.isoformat() if u.created_at else None,
             "daily_chats_used": u.daily_chats_used,
         }

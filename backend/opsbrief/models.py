@@ -62,8 +62,23 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     name = Column(String(255), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
-    is_pro = Column(Integer, default=0)  # boolean as int for SQLite compat
-    pro_expires_at = Column(DateTime(timezone=True), nullable=True)
+    is_pro = Column(Integer, default=0)  # boolean as int for SQLite compat (deprecated, use subscription fields)
+    pro_expires_at = Column(DateTime(timezone=True), nullable=True)  # deprecated
+
+    # Subscription / trial tracking (VIP tier)
+    subscription_tier = Column(String(20), default="free", nullable=False)  # free, vip
+    subscription_status = Column(String(20), default="none", nullable=False)  # none, trialing, active, cancelled, past_due
+    trial_started_at = Column(DateTime(timezone=True), nullable=True)
+    trial_ends_at = Column(DateTime(timezone=True), nullable=True)
+    subscription_started_at = Column(DateTime(timezone=True), nullable=True)
+    subscription_ends_at = Column(DateTime(timezone=True), nullable=True)
+    subscription_renews_at = Column(DateTime(timezone=True), nullable=True)
+    cancelled_at = Column(DateTime(timezone=True), nullable=True)
+
+    # Payment provider fields
+    stripe_customer_id = Column(String(255), nullable=True)
+    stripe_subscription_id = Column(String(255), nullable=True)
+    paypal_subscription_id = Column(String(255), nullable=True)
 
     # Preferences stored as JSON string for simplicity
     preferences_json = Column(Text, default='{}')
@@ -77,6 +92,24 @@ class User(Base):
     briefings = relationship("Briefing", back_populates="user", cascade="all, delete-orphan")
     saved_items = relationship("SavedItem", back_populates="user", cascade="all, delete-orphan")
     conversations = relationship("Conversation", back_populates="user", cascade="all, delete-orphan")
+
+    @property
+    def is_vip(self) -> bool:
+        """Check if user has an active VIP subscription or valid trial."""
+        if self.subscription_tier != "vip":
+            return False
+        now = datetime.now(timezone.utc)
+        if self.subscription_status == "trialing":
+            trial_ends = self.trial_ends_at
+            if trial_ends is not None and trial_ends.tzinfo is None:
+                trial_ends = trial_ends.replace(tzinfo=timezone.utc)
+            return trial_ends is None or trial_ends > now
+        if self.subscription_status in ("active", "trialing"):
+            sub_ends = self.subscription_ends_at
+            if sub_ends is not None and sub_ends.tzinfo is None:
+                sub_ends = sub_ends.replace(tzinfo=timezone.utc)
+            return sub_ends is None or sub_ends > now
+        return False
 
 
 class RawIntel(Base):

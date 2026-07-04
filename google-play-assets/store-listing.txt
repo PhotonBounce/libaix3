@@ -1,0 +1,50 @@
+=== Google Play Store Listing - OpsBrief ===
+
+TITLE (30 chars max):
+OpsBrief: IT Intel Daily
+
+SHORT DESCRIPTION (80 chars max):
+AI-powered daily security briefings for IT professionals
+
+FULL DESCRIPTION (4000 chars max):
+Stay ahead of threats with OpsBrief — the AI-powered daily briefing app built for network engineers, system administrators, and IT operations professionals.
+
+Every morning, OpsBrief delivers a curated intelligence briefing tailored to your tech stack. From critical CVE alerts and patch advisories to AI-guided troubleshooting and security insights, get everything you need to protect your infrastructure — all in one place.
+
+KEY FEATURES:
+
+AI-Powered Daily Briefings
+Start your day with a personalized intelligence summary. Our AI analyzes thousands of security feeds, vendor advisories, and threat reports to deliver only what matters to your stack.
+
+Real-Time CVE Tracking
+Get instant alerts for critical and high-severity CVEs affecting your infrastructure. Each alert includes severity scoring, affected versions, and actionable mitigation steps.
+
+Intelligent Chat Assistant
+Ask questions in natural language. "How do I patch CVE-2025-1234?" or "What threats affect Palo Alto this week?" Get expert-level guidance instantly.
+
+Tech Stack Personalization
+Select your technologies — Cisco, Juniper, Palo Alto, Linux, Windows, VMware, AWS, Azure, Kubernetes, and more. Briefings are filtered and prioritized for your environment.
+
+Saved Intel & Search
+Bookmark critical alerts and AI conversations. Build your own knowledge base and search across all saved briefings with full-text search.
+
+Patch Tuesday Summaries
+Never miss a Microsoft Patch Tuesday or major vendor release. Get consolidated summaries with impact analysis for your stack.
+
+VIP Pro Subscription
+Unlock unlimited AI chats, advanced filtering, priority CVE alerts, and weekly executive summaries with OpsBrief Pro.
+
+WHO IS IT FOR?
+• Network Engineers managing routers, switches, and firewalls
+• System Administrators maintaining Linux and Windows servers
+• Cloud & DevOps Engineers on AWS, Azure, and Kubernetes
+• Security Operations Center (SOC) analysts
+• IT Directors needing executive-level summaries
+
+OpsBrief turns information overload into actionable intelligence. Download now and get your first briefing in under 60 seconds.
+
+WHAT'S NEW:
+Initial release with AI-powered daily briefings, CVE tracking, and intelligent chat assistant.
+
+---
+Keywords: IT security, CVE alerts, network engineering, sysadmin, patch management, AI assistant, cybersecurity, threat intelligence, daily briefing, IT operations
