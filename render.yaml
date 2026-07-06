@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: opsbrief-api
+    runtime: python
+    plan: free
+    region: ohio
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && uvicorn opsbrief.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+      - key: JWT_SECRET_KEY
+        value: "opsbrief-render-secret-key-32chars-min"
+      - key: ADMIN_KEY
+        value: "opsbrief-admin-key-32chars-long-minimum"
+      - key: FREE_MODE
+        value: "false"
+      - key: ANTHROPIC_API_KEY
+        value: ""
+      - key: DATABASE_URL
+        value: "sqlite:///opsbrief.db"
+      - key: REDIS_URL
+        value: ""
+      - key: STRIPE_SECRET_KEY
+        value: ""
+      - key: STRIPE_WEBHOOK_SECRET
+        value: ""
+      - key: ENVIRONMENT
+        value: "production"
+      - key: CORS_ORIGINS
+        value: ""
