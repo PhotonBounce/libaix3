@@ -92,6 +92,7 @@ class User(Base):
     briefings = relationship("Briefing", back_populates="user", cascade="all, delete-orphan")
     saved_items = relationship("SavedItem", back_populates="user", cascade="all, delete-orphan")
     conversations = relationship("Conversation", back_populates="user", cascade="all, delete-orphan")
+    crypto_payments = relationship("CryptoPayment", back_populates="user", cascade="all, delete-orphan")
 
     @property
     def is_vip(self) -> bool:
@@ -168,6 +169,43 @@ class SavedItem(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
 
     user = relationship("User", back_populates="saved_items")
+
+
+class PaymentEvent(Base):
+    """Audit log for payment provider webhook events."""
+
+    __tablename__ = "payment_events"
+
+    id = Column(UuidType, primary_key=True, default=lambda: str(uuid.uuid4()))
+    provider = Column(String(20), nullable=False, index=True)  # stripe, paypal, crypto
+    event_type = Column(String(100), nullable=False, index=True)
+    event_id = Column(String(255), nullable=False, index=True)
+    payload_json = Column(Text, default='{}')
+    processed_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    user_id = Column(UuidType, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    status = Column(String(20), default="pending")  # pending, processed, failed
+
+
+class CryptoPayment(Base):
+    """Crypto payment records for VIP subscription purchases."""
+
+    __tablename__ = "crypto_payments"
+
+    id = Column(UuidType, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(UuidType, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    chain = Column(String(20), nullable=False, index=True)  # eth, btc, sol, tron, bnb, polygon, linea, base, arbitrum, op
+    tx_hash = Column(String(255), nullable=False, index=True)
+    amount_native = Column(String(50), nullable=False)  # raw amount in native token (string for precision)
+    amount_usd = Column(Float, nullable=True)  # USD equivalent at verification time
+    verified = Column(Integer, default=0)  # 0 = pending, 1 = verified
+    verified_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("User", back_populates="crypto_payments")
+
+    __table_args__ = (
+        UniqueConstraint("chain", "tx_hash", name="uq_crypto_payment_chain_tx"),
+    )
 
 
 class Conversation(Base):

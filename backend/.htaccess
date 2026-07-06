@@ -1,0 +1,4 @@
+PassengerPython /home/photonb/public_html/opsbrief/api/venv/bin/python3
+PassengerAppRoot /home/photonb/public_html/opsbrief/api
+PassengerStartupFile passenger_wsgi.py
+PassengerEnabled on

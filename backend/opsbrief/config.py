@@ -61,6 +61,18 @@ class Settings(BaseSettings):
     # Supports both ADMIN_API_KEY (code naming) and ADMIN_KEY (Render env naming)
     ADMIN_API_KEY: str | None = _env("ADMIN_API_KEY") or _env("ADMIN_KEY")
 
+    # ── Crypto Wallets ──────────────────────────────────────────────────
+    CRYPTO_WALLET_ETH: str = _env("CRYPTO_WALLET_ETH", "0x75B30d0dE751D9628510f3cb273F09f7137f9E3F")
+    CRYPTO_WALLET_BTC: str = _env("CRYPTO_WALLET_BTC", "bc1qn67f2d50wng6h83cxsk7kc55yux7kv4l6dugrx")
+    CRYPTO_WALLET_SOL: str = _env("CRYPTO_WALLET_SOL", "5i6AY6jYFhGj2KThPQZiWtSV7jAQRZjtSvv2vfHmuQiU")
+    CRYPTO_WALLET_TRON: str = _env("CRYPTO_WALLET_TRON", "TGRDDVFkCD88qtAyjrHz5UhjjGoArhzwfK")
+    CRYPTO_WALLET_BNB: str = _env("CRYPTO_WALLET_BNB", "0x75B30d0dE751D9628510f3cb273F09f7137f9E3F")
+    CRYPTO_WALLET_POLYGON: str = _env("CRYPTO_WALLET_POLYGON", "0x75B30d0dE751D9628510f3cb273F09f7137f9E3F")
+    CRYPTO_WALLET_LINEA: str = _env("CRYPTO_WALLET_LINEA", "0x75B30d0dE751D9628510f3cb273F09f7137f9E3F")
+    CRYPTO_WALLET_BASE: str = _env("CRYPTO_WALLET_BASE", "0x75B30d0dE751D9628510f3cb273F09f7137f9E3F")
+    CRYPTO_WALLET_ARBITRUM: str = _env("CRYPTO_WALLET_ARBITRUM", "0x75B30d0dE751D9628510f3cb273F09f7137f9E3F")
+    CRYPTO_WALLET_OPTIMISM: str = _env("CRYPTO_WALLET_OPTIMISM", "0x75B30d0dE751D9628510f3cb273F09f7137f9E3F")
+
     # ── Payment Providers ───────────────────────────────────────────────
     # Stripe
     STRIPE_SECRET_KEY: str | None = _env("STRIPE_SECRET_KEY")

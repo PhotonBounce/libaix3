@@ -51,7 +51,14 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:#0a0a0f;c
 .footer a{color:#94a3b8;text-decoration:none;margin:0 12px}
 .footer a:hover{color:#e2e8f0}
 .badge{display:inline-block;padding:4px 12px;border-radius:20px;background:rgba(255,255,255,0.05);font-size:0.75rem;color:#94a3b8;margin-bottom:16px}
-@media(max-width:640px){.hero{padding:60px 16px}.features{padding:60px 16px}.pricing{padding:60px 16px}}
+.download{padding:80px 24px;text-align:center;background:radial-gradient(ellipse at 50% 50%,rgba(14,165,233,0.08) 0%,transparent 70%)}
+.download h2{font-size:2rem;margin-bottom:1rem}
+.download p{color:#94a3b8;max-width:500px;margin:0 auto 1.5rem}
+.download-meta{display:flex;gap:24px;justify-content:center;flex-wrap:wrap;color:#64748b;font-size:0.875rem;margin-top:16px}
+.download-meta span{display:inline-flex;align-items:center;gap:6px}
+.btn-green{background:#10b981;color:#fff}
+.btn-green:hover{background:#059669;transform:translateY(-2px)}
+@media(max-width:640px){.hero{padding:60px 16px}.features{padding:60px 16px}.pricing{padding:60px 16px}.download{padding:60px 16px}}
 </style>
 </head>
 <body>
@@ -62,7 +69,22 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:#0a0a0f;c
 <p>Daily intelligence briefings for IT professionals. Stay ahead of vulnerabilities, patches, and threats — curated for your tech stack.</p>
 <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
 <a href="/opsbrief/app/" class="btn btn-primary">Launch App →</a>
+<a href="/opsbrief/OpsBrief-v1.0.0.apk" class="btn btn-green">⬇ Download APK</a>
 <a href="https://github.com/PhotonBounce/libaix3" class="btn btn-secondary">View on GitHub</a>
+</div>
+</div>
+</section>
+<section class="download">
+<div class="container">
+<div class="badge">🤖 Android App</div>
+<h2>Download OpsBrief for Android</h2>
+<p>Get the native Android experience. Install the APK directly — no Google Play required. Same features, optimized for mobile.</p>
+<a href="/opsbrief/OpsBrief-v1.0.0.apk" class="btn btn-green" style="font-size:1.1rem;padding:16px 40px">⬇ Download APK</a>
+<div class="download-meta">
+<span>📦 v1.0.0</span>
+<span>🤖 Android 8.0+</span>
+<span>📐 ~3 MB</span>
+<span>🔓 Sideload ready</span>
 </div>
 </div>
 </section>
@@ -75,7 +97,7 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:#0a0a0f;c
 <div class="card"><div class="card-icon">🔖</div><h3>Save Intel</h3><p>Bookmark critical items for later. Build your personal knowledge base.</p></div>
 <div class="card"><div class="card-icon">📊</div><h3>Admin Dashboard</h3><p>Track usage, manage intel, and monitor system health from a single panel.</p></div>
 <div class="card"><div class="card-icon">🔔</div><h3>Smart Notifications</h3><p>Get alerted when critical vulnerabilities hit your stack. No noise, only signal.</p></div>
-<div class="card"><div class="card-icon">📱</div><h3>PWA + Android</h3><p>Install as a web app on any device. Native Android app coming to Google Play.</p></div>
+<div class="card"><div class="card-icon">📱</div><h3>PWA + Android</h3><p>Install as a web app on any device. Or download the native Android APK — now available.</p></div>
 </div>
 </div>
 </section>
@@ -85,25 +107,25 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:#0a0a0f;c
 <div class="price-grid">
 <div class="price-card">
 <h3>Free</h3>
-<div class="price">$0<span>/month</span></div>
+<div class="price">$0<span>/year</span></div>
 <ul>
-<li>✓ Daily briefing</li>
+<li>✓ 1 briefing/day</li>
 <li>✓ 5 chat messages/day</li>
 <li>✓ 50 saved intel items</li>
-<li>✓ Email digest</li>
 </ul>
 <a href="/opsbrief/app/" class="btn btn-secondary" style="width:100%;justify-content:center">Get Started</a>
 </div>
 <div class="price-card popular">
-<h3>Pro</h3>
-<div class="price">$9.99<span>/month</span></div>
+<h3>VIP</h3>
+<div class="price">$2<span>/year</span></div>
 <ul>
-<li>✓ Unlimited chat</li>
+<li>✓ Unlimited briefings</li>
+<li>✓ Unlimited AI chats</li>
 <li>✓ Unlimited saved intel</li>
-<li>✓ Priority briefing</li>
-<li>✓ Advanced filters</li>
-<li>✓ Slack/Teams integration</li>
+<li>✓ Priority sources & early alerts</li>
+<li>✓ Full briefing history</li>
 </ul>
+<div style="margin:8px 0;font-size:0.8rem;color:#10b981">🎁 1-week free trial</div>
 <a href="/opsbrief/app/" class="btn btn-primary" style="width:100%;justify-content:center">Start Free Trial</a>
 </div>
 <div class="price-card">

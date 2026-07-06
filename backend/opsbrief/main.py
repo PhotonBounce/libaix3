@@ -36,6 +36,7 @@ from .models import (
     engine,
 )
 from .services.cache import cache
+from .api.payments import router as payments_router
 
 logger = logging.getLogger(__name__)
 security_logger = logging.getLogger("security")
@@ -573,6 +574,8 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
 )
+
+app.include_router(payments_router)
 
 
 # ── Auth Routes ──────────────────────────────────────────────────────
